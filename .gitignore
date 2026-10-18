@@ -1,0 +1,19 @@
+# Datos de estudiantes, respaldos y secretos: NUNCA al repositorio
+/datos/
+.env
+*.db
+*.db-wal
+*.db-shm
+respaldos/
+tesis/notebook/VocacionalBayesiano_DATOS/01_entrada/
+tesis/notebook/VocacionalBayesiano_DATOS/04_procesado/privado/
+tesis/encuesta_validacion/sitio/datos/respuestas.jsonl
+tesis/encuesta_validacion/respuestas_descargadas/
+
+# Python / editores
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+.DS_Store
+pruebas/datos/Report_7.csv

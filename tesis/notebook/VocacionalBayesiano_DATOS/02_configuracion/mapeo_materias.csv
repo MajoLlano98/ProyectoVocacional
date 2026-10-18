@@ -1,0 +1,22 @@
+patron,incluir,C,H,A,S,I,D,E,justificacion
+student council|stuco|class officer|model united|\bmun\b|basketball|volleyball|football|soccer|varsity|\bjv\b|discipleship,no,0,0,0,0,0,0,0,v2 · Extracurricular / gobierno estudiantil / deporte / formación
+conduct|conducta,no,0,0,0,0,0,0,0,No académica
+bible|biblia|chapel|christian|cristian,no,0,0,0,0,0,0,0,Formación cristiana (excluida por propuesta)
+physical ed|\bp\.?e\.?\b|educaci[oó]n f[ií]sica,no,0,0,0,0,0,0,0,Educación física (excluida por propuesta)
+composition|narrativ|escritura|redacci,si,1,3,1,0,0,0,0,v2 · Composición y escritura → Humanísticas
+homeroom|advisory|study hall|extracurric|club,no,0,0,0,0,0,0,0,No académica / extracurricular
+computer|programming|robotic|coding|inform[aá]tica|technology|tecnolog,si,0,0,0,0,3,0,1,Pensamiento computacional → Ingenierías
+econom|business|accounting|contab|finance|emprend,si,3,1,0,0,0,0,1,Gestión y números aplicados → Administrativas
+psycholog|sociolog|psicolog,si,0,2,0,2,0,0,0,Conducta humana → Humanísticas y Salud
+health|salud|anatomy|anatom,si,0,0,0,3,0,0,1,Salud
+calculus|c[aá]lculo|statistic|estad[ií]stic,si,1,0,0,0,2,0,3,Matemática avanzada → Exactas
+math|algebra|geometr|matem|trigonom,si,1,0,0,0,2,0,3,Matemática → Exactas e Ingenierías
+physic|f[ií]sica,si,0,0,0,0,3,0,3,Física → Ingenierías y Exactas
+chemi|qu[ií]mica,si,0,0,0,2,1,0,3,Química → Exactas y Salud
+biolog|life science|ciencias de la vida,si,0,0,0,3,0,0,2,Biología → Salud y Agrarias
+science|ciencias,si,0,0,0,1,1,0,2,Ciencias generales
+\bart\b|arts|arte|dibujo|drawing|design|dise[nñ]o|paint,si,0,0,3,0,0,0,0,Artes visuales
+music|m[uú]sica|band|choir|coro,si,0,0,3,0,0,0,0,Música
+drama|theat|teatro,si,0,1,3,0,0,0,0,Artes escénicas
+histor|social stud|estudios sociales|government|civic|geograph|c[ií]vica,si,1,3,0,0,0,1,0,Sociedad e instituciones → Humanísticas
+english|language arts|reading|writing|literat|ingl[eé]s|lengua|spanish|espa[nñ]ol|french|franc,si,1,3,1,0,0,0,0,Lenguaje y comunicación → Humanísticas

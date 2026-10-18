@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Entrar · Sistema Vocacional</title>
+<meta name="theme-color" content="#2f3d8a"><link rel="manifest" href="/manifest.json"><link rel="icon" href="/icono.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/icono-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="estilo.css"></head>
+<body class="pagina-sola">
+<main class="caja-sola">
+  <div class="marca-sola">
+    <svg width="40" height="40" viewBox="0 0 26 26" aria-hidden="true">
+      <rect x="1" y="1" width="24" height="24" rx="6" fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.5"/>
+      <line x1="13" y1="4" x2="13" y2="22" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>
+      <line x1="4" y1="13" x2="22" y2="13" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>
+      <circle cx="18" cy="8" r="3" fill="var(--z-vc)"/><circle cx="8.5" cy="17.5" r="2.4" fill="var(--z-tn)"/>
+    </svg>
+    <h1>Sistema de Recomendación Vocacional</h1>
+    <p class="sutil">Acceso para el DECE y la administración</p>
+  </div>
+  <form class="panel g-form" id="f" novalidate>
+    <label>Usuario <input name="usuario" type="email" autocomplete="username" required autofocus></label>
+    <label>Contraseña <input name="clave" type="password" autocomplete="current-password" required></label>
+    <p class="g-error" id="err" role="alert" hidden></p>
+    <button class="boton" id="b">Entrar</button>
+  </form>
+  <div class="panel aviso-est">
+    <b>¿Eres estudiante?</b> Para responder el test vocacional entra a <a href="/chaside">la página del test</a> con el código que te dio tu orientador(a).
+  </div>
+</main>
+<script src="entrar.js"></script>
+</body></html>

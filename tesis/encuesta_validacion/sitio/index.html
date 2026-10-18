@@ -1,0 +1,878 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.ENCUESTA_ENDPOINT = 'guardar.php'; /* en tu servidor con PHP. Alternativa: URL /exec de Google Apps Script */</script>
+</head><body>
+<title>Encuesta Vocacional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=JetBrains+Mono:wght@400;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: una columna centrada tipo formulario por pasos (barra de progreso arriba, una tarjeta por paso, botones al pie) */
+:root {
+  --bg: #f4f5f8; --surface: #ffffff; --surface-2: #eceef3; --line: #dbdfe7;
+  --fg: #141823; --fg-2: #4a5263; --fg-3: #6f7788;
+  --accent: #2f3d8a; --accent-soft: #e5e8f6;
+  --z-vc: #1baf7a; --z-if: #eda100; --z-tn: #2a78d6; --z-np: #a3a9b5;
+  --crit: #c23434;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111318; --surface: #191c23; --surface-2: #222631; --line: #2d3240;
+    --fg: #eef0f5; --fg-2: #b7bdca; --fg-3: #8b92a3; --accent: #9eabf2; --accent-soft: #252b47;
+    --z-vc: #199e70; --z-if: #c98500; --z-tn: #3987e5; --z-np: #5d6372; --crit: #e66767; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111318; --surface: #191c23; --surface-2: #222631; --line: #2d3240;
+  --fg: #eef0f5; --fg-2: #b7bdca; --fg-3: #8b92a3; --accent: #9eabf2; --accent-soft: #252b47;
+  --z-vc: #199e70; --z-if: #c98500; --z-tn: #3987e5; --z-np: #5d6372; --crit: #e66767; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.5; margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.sutil { color: var(--fg-3); font-size: 0.88rem; }
+.etiqueta { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-3); font-weight: 700; }
+
+.cab { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); border-bottom: 1px solid var(--line); }
+.cab-in { max-width: 760px; margin: 0 auto; padding: 12px 16px 10px; display: flex; flex-direction: column; gap: 8px; }
+.cab-fila { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.cab h1 { font-size: 1.05rem; }
+.pasos { display: flex; gap: 4px; }
+.pasos i { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-2); }
+.pasos i.hecho { background: var(--accent); }
+.pasos i.actual { background: color-mix(in srgb, var(--accent) 45%, var(--surface-2)); }
+
+.marco { max-width: 760px; margin: 0 auto; padding-block: 24px 64px; padding-inline: 16px; }
+.tarjeta { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+.tarjeta h2 { font-size: 1.45rem; }
+.lead { font-size: 1.05rem; color: var(--fg-2); margin: 0; max-width: 60ch; }
+.campo { display: flex; flex-direction: column; gap: 6px; }
+.campo label, .campo .lbl { font-weight: 600; }
+select, input[type="text"], input[type="number"] { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); width: 100%; }
+.fila-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 560px) { .fila-2 { grid-template-columns: minmax(0, 1fr); } }
+.error { color: var(--crit); font-size: 0.88rem; min-height: 1.2em; margin: 0; }
+.pie { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+.boton { border: 1px solid var(--accent); background: var(--accent); color: var(--surface); padding: 11px 22px; border-radius: 10px; cursor: pointer; font-weight: 700; }
+.boton.sec { background: transparent; color: var(--accent); }
+.boton:disabled { opacity: 0.45; cursor: not-allowed; }
+.aviso { padding: 12px 14px; border-radius: 10px; background: var(--accent-soft); font-size: 0.95rem; }
+.aviso.proto { background: color-mix(in srgb, var(--z-if) 16%, transparent); font-size: 0.85rem; color: var(--fg-2); }
+
+/* Notas */
+table.notas { width: 100%; border-collapse: collapse; }
+table.notas th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-3); padding: 0 6px 8px; }
+table.notas td { padding: 6px; border-top: 1px solid var(--line); }
+table.notas td:first-child { font-weight: 600; }
+table.notas input { max-width: 110px; text-align: center; font-family: var(--font-data); }
+.col2[hidden] { display: none; }
+.check { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; font-weight: 600; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+/* Preguntas */
+.recuerda { font-size: 0.95rem; }
+.preguntas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.preguntas li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.preguntas li.ok { background: var(--surface-2); }
+.preguntas li:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sn { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.sn button { border: 0; background: var(--surface); padding: 10px 20px; cursor: pointer; font-weight: 700; color: var(--fg-2); }
+.sn button + button { border-left: 1px solid var(--line); }
+.sn button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+@media (max-width: 520px) { .preguntas li { grid-template-columns: minmax(0, 1fr); } .preguntas .sn { justify-self: end; } }
+
+/* Escala y opciones */
+.escala { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.escala button, .opciones button { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--fg-2); }
+.escala button b { font-family: var(--font-data); font-size: 1.15rem; color: var(--fg); }
+.escala button span { font-size: 0.72rem; text-align: center; }
+.escala button[aria-checked="true"], .opciones button[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--fg); }
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.opciones button { flex-direction: row; padding: 9px 14px; font-weight: 600; }
+
+/* Resultado */
+.figuras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.figura { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 14px 10px; border-radius: 12px; background: var(--surface-2); }
+.figura > div:first-child { width: 84px; }
+.figura svg { width: 100%; height: auto; display: block; filter: drop-shadow(0 5px 8px rgb(15 23 42 / 0.14)); }
+.figura .nm { font-family: var(--font-display); font-weight: 700; line-height: 1.2; }
+.figura .pc { font-family: var(--font-data); font-weight: 700; }
+.figura .pc .sutil { font-family: var(--font-body); font-weight: 400; }
+@media (max-width: 560px) { .figuras { grid-template-columns: minmax(0, 1fr); } }
+.propia { padding: 14px; border-radius: 12px; border: 1px solid var(--line); display: flex; gap: 14px; align-items: center; }
+.propia .pos { font-family: var(--font-display); font-size: 2rem; font-weight: 800; line-height: 1; }
+.areas-r { display: flex; flex-direction: column; gap: 10px; }
+.area-r { display: grid; grid-template-columns: 130px minmax(0, 1fr) minmax(0, 1fr); gap: 6px 14px; align-items: center; font-size: 0.9rem; }
+.area-r .bar { display: grid; grid-template-columns: minmax(0, 1fr) 28px; gap: 6px; align-items: center; }
+.bar-t { position: relative; height: 10px; background: var(--surface-2); border-radius: 5px; overflow: hidden; }
+.bar-t i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 5px; }
+.bar-t .m { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--surface); }
+.areas-cab { display: grid; grid-template-columns: 130px minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 560px) { .area-r, .areas-cab { grid-template-columns: 104px minmax(0, 1fr) minmax(0, 1fr); gap: 6px 10px; } .area-r { font-size: 0.82rem; } }
+.vacio { text-align: center; color: var(--fg-3); }
+
+/* Materias agregadas */
+.extra { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.extra .lbl { font-weight: 600; }
+#extras { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.fila-extra { display: grid; grid-template-columns: minmax(0, 1fr) 90px 90px 40px; gap: 8px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.fila-extra:not(:has(.x-n2)) { grid-template-columns: minmax(0, 1fr) 90px 40px; }
+.fila-extra input[type="number"] { text-align: center; font-family: var(--font-data); }
+.x-info { grid-column: 1 / -1; }
+.x-info select { max-width: 340px; }
+.quitar { width: 40px; height: 40px; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; cursor: pointer; font-size: 1.2rem; color: var(--fg-3); }
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+table.notas td:last-child { width: 48px; }
+.quitadas { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; }
+.restaurar { border: 1px dashed var(--line); background: transparent; border-radius: 999px; padding: 3px 10px; cursor: pointer; color: var(--fg-2); font-size: 0.82rem; }
+.restaurar:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Barra de avance verde */
+.avance { display: flex; align-items: center; gap: 10px; }
+.avance-t { flex: 1; height: 10px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+.avance-t i { display: block; height: 100%; width: 0; background: var(--z-vc); border-radius: 5px; transition: width 0.3s ease; }
+.avance b { font-size: 0.85rem; color: var(--fg-2); min-width: 74px; text-align: right; }
+@media (prefers-reduced-motion: reduce) { .avance-t i { transition: none; } }
+
+/* El atributo hidden siempre oculta, aunque la clase tenga display */
+[hidden] { display: none !important; }
+
+</style>
+<header class="cab"><div class="cab-in">
+  <div class="cab-fila"><h1>Encuesta Vocacional</h1><span class="sutil" id="paso-nombre"></span></div>
+  <div class="avance"><div class="avance-t" role="progressbar" aria-label="Avance de la encuesta" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="barra-avance"></i></div><b id="pct-avance" class="mono">0 %</b></div>
+</div></header>
+<main class="marco" id="vista" aria-live="polite"></main>
+
+<script>window.DATOS_MODELO={"modelo":{"claves":[[1,"C","interes"],[2,"C","aptitud"],[3,"A","interes"],[4,"S","aptitud"],[5,"D","interes"],[6,"I","interes"],[7,"E","aptitud"],[8,"S","interes"],[9,"H","interes"],[10,"I","aptitud"],[11,"A","interes"],[12,"C","interes"],[13,"D","aptitud"],[14,"D","interes"],[15,"C","aptitud"],[16,"S","interes"],[17,"E","interes"],[18,"D","aptitud"],[19,"I","interes"],[20,"C","interes"],[21,"A","interes"],[22,"A","aptitud"],[23,"S","interes"],[24,"D","interes"],[25,"H","interes"],[26,"I","aptitud"],[27,"I","interes"],[28,"A","interes"],[29,"S","aptitud"],[30,"H","aptitud"],[31,"D","interes"],[32,"E","interes"],[33,"S","interes"],[34,"H","interes"],[35,"E","interes"],[36,"A","interes"],[37,"D","interes"],[38,"I","interes"],[39,"A","aptitud"],[40,"S","aptitud"],[41,"H","interes"],[42,"E","interes"],[43,"D","aptitud"],[44,"S","interes"],[45,"A","interes"],[46,"C","aptitud"],[47,"I","interes"],[48,"D","interes"],[49,"E","interes"],[50,"A","interes"],[51,"C","aptitud"],[52,"S","interes"],[53,"C","interes"],[54,"I","interes"],[55,"E","aptitud"],[56,"H","interes"],[57,"A","interes"],[58,"D","interes"],[59,"I","aptitud"],[60,"I","interes"],[61,"E","interes"],[62,"S","interes"],[63,"H","aptitud"],[64,"C","interes"],[65,"D","interes"],[66,"D","aptitud"],[67,"H","interes"],[68,"E","interes"],[69,"S","aptitud"],[70,"S","interes"],[71,"C","interes"],[72,"H","aptitud"],[73,"D","interes"],[74,"H","interes"],[75,"I","interes"],[76,"A","aptitud"],[77,"E","interes"],[78,"C","interes"],[79,"E","aptitud"],[80,"H","interes"],[81,"A","interes"],[82,"A","aptitud"],[83,"I","interes"],[84,"D","interes"],[85,"C","interes"],[86,"H","aptitud"],[87,"S","interes"],[88,"E","interes"],[89,"H","interes"],[90,"I","aptitud"],[91,"C","interes"],[92,"S","interes"],[93,"E","interes"],[94,"E","aptitud"],[95,"H","interes"],[96,"A","interes"],[97,"I","interes"],[98,"C","interes"]],"normas_chaside":{"C":{"interes":[0.468,0.32],"aptitud":[0.495,0.35]},"H":{"interes":[0.409,0.302],"aptitud":[0.468,0.347]},"A":{"interes":[0.434,0.302],"aptitud":[0.43,0.353]},"S":{"interes":[0.448,0.311],"aptitud":[0.458,0.353]},"I":{"interes":[0.475,0.312],"aptitud":[0.443,0.354]},"D":{"interes":[0.433,0.309],"aptitud":[0.458,0.349]},"E":{"interes":[0.438,0.298],"aptitud":[0.444,0.361]}},"consistencia":{"disp_p05":0.163,"rango_si":[0.35,0.65]},"alfa_chaside":{"C":{"interes":0.847,"aptitud":0.649},"H":{"interes":0.821,"aptitud":0.647},"A":{"interes":0.813,"aptitud":0.681},"S":{"interes":0.826,"aptitud":0.668},"I":{"interes":0.826,"aptitud":0.679},"D":{"interes":0.825,"aptitud":0.654},"E":{"interes":0.808,"aptitud":0.7}},"param":{"C":{"alfa_notas":0.95,"lam_apt":0.255,"r_apt_notas":0.248,"rho":0.176,"W_med":15.16},"H":{"alfa_notas":0.95,"lam_apt":0.287,"r_apt_notas":0.28,"rho":0.209,"W_med":23.76},"A":{"alfa_notas":0.922,"lam_apt":0.338,"r_apt_notas":0.325,"rho":0.133,"W_med":14.12},"S":{"alfa_notas":0.831,"lam_apt":0.278,"r_apt_notas":0.254,"rho":0.094,"W_med":5.44},"I":{"alfa_notas":0.95,"lam_apt":0.329,"r_apt_notas":0.32,"rho":0.174,"W_med":10.6},"D":{"alfa_notas":0.893,"lam_apt":0.156,"r_apt_notas":0.147,"rho":0.157,"W_med":2.44},"E":{"alfa_notas":0.95,"lam_apt":0.305,"r_apt_notas":0.297,"rho":0.088,"W_med":17.08}},"rubrica":{"validacion":{"publicada":1.0,"adaptacion":1.3,"ad_hoc":2.0},"equivalencia":{"directa":1.0,"aproximada":1.5,"debil":2.5},"antiguedad":{"menos_1_anio":1.0,"1_a_2_anios":1.2,"mas_2_anios":1.5},"completitud":{"completa":1.0,"parcial":1.3,"incompleta":2.0},"modalidad":{"supervisada":1.0,"autonoma":1.2},"consistencia":{"sin_alertas":1.0,"alerta":2.0}},"umbral_certeza":0.6,"n_sim":1000,"top_k":5,"beta":0.5,"preguntas":{"1":"¿Te gustaría administrar los recursos de una empresa o institución?","2":"¿Se te facilitan los cálculos con porcentajes, intereses o descuentos?","3":"¿Te gustaría dibujar, pintar o ilustrar como parte de tu trabajo?","4":"¿Mantienes la calma ante la sangre o las heridas?","5":"¿Te gustaría proteger a tu comunidad ante emergencias o desastres?","6":"¿Te gustaría diseñar y construir máquinas o robots?","7":"¿Se te facilitan las matemáticas?","8":"¿Te gustaría atender a personas enfermas o heridas?","9":"¿Te gustaría investigar sobre la historia y las culturas de los pueblos?","10":"¿Se te facilita entender cómo están armadas las cosas?","11":"¿Disfrutarías diseñar espacios, objetos o ropa?","12":"¿Te interesaría llevar las cuentas y los presupuestos de un negocio?","13":"¿Mantienes la calma y decides rápido en situaciones de peligro?","14":"¿Te interesaría formarte en una escuela militar o policial?","15":"¿Eres ordenado(a) para llevar registros y archivos?","16":"¿Te interesaría saber cómo funciona el cuerpo humano por dentro?","17":"¿Te gustaría investigar en un laboratorio?","18":"¿Cumples normas e instrucciones con rigor?","19":"¿Te interesaría programar aplicaciones o sistemas informáticos?","20":"¿Te gustaría crear y dirigir tu propio emprendimiento?","21":"¿Te interesaría componer, tocar o producir música?","22":"¿Tienes facilidad para dibujar o representar ideas visualmente?","23":"¿Disfrutarías ayudar a alguien a recuperar su movilidad o su salud?","24":"¿Disfrutarías trabajar con disciplina y orden jerárquico?","25":"¿Te interesaría defender los derechos de las personas ante la ley?","26":"¿Resuelves problemas de lógica con facilidad?","27":"¿Disfrutarías entender cómo funcionan los circuitos y la electricidad?","28":"¿Te gustaría actuar o dirigir obras de teatro?","29":"¿Tienes paciencia para cuidar a otras personas?","30":"¿Se te facilita expresar tus ideas por escrito con claridad?","31":"¿Te gustaría investigar delitos y buscar evidencias?","32":"¿Te interesaría estudiar los fenómenos de la naturaleza y el universo?","33":"¿Te gustaría trabajar en un hospital, una clínica o un centro de salud?","34":"¿Disfrutarías escribir artículos, ensayos o crónicas?","35":"¿Disfrutarías resolver problemas matemáticos complejos?","36":"¿Te llama la atención crear videos, animaciones o fotografías?","37":"¿Te interesaría defender la soberanía y las fronteras del país?","38":"¿Te gustaría diseñar puentes, edificios o carreteras?","39":"¿Tienes buen oído para el ritmo y la música?","40":"¿Se te facilita la biología?","41":"¿Te gustaría enseñar a niños o jóvenes?","42":"¿Te gustaría trabajar en el campo con cultivos o animales?","43":"¿Tienes buena resistencia física?","44":"¿Te interesaría la alimentación saludable y su efecto en el cuerpo?","45":"¿Disfrutarías diseñar la imagen visual de una marca?","46":"¿Sueles convencer a otros de apoyar una idea o un plan?","47":"¿Te interesaría mejorar los procesos de una fábrica?","48":"¿Te gustaría coordinar planes de evacuación o de rescate?","49":"¿Te interesaría estudiar las plantas, los animales y los ecosistemas?","50":"¿Te gustaría visitar museos y conocer el trabajo de artistas?","51":"¿Administras bien tu dinero y tu tiempo?","52":"¿Te gustaría cuidar la salud de los animales?","53":"¿Disfrutarías organizar el trabajo de un equipo y asignar tareas?","54":"¿Te gustaría trabajar con redes, servidores o ciberseguridad?","55":"¿Eres observador(a) y meticuloso(a) al hacer un experimento?","56":"¿Te llama la atención entender por qué las sociedades actúan como actúan?","57":"¿Te interesaría crear personajes o mundos para un videojuego o una historia?","58":"¿Disfrutarías actividades que exigen buena condición física?","59":"¿Aprendes rápido a usar programas o herramientas nuevas?","60":"¿Disfrutarías arreglar motores, aparatos o equipos?","61":"¿Te gustaría descubrir nuevos materiales o sustancias químicas?","62":"¿Disfrutarías escuchar y apoyar a personas con dificultades emocionales?","63":"¿Recuerdas con facilidad lo que lees?","64":"¿Te llama la atención entender cómo se mueven los precios y los mercados?","65":"¿Te interesaría trabajar en la seguridad de personas o instalaciones?","66":"¿Sabes liderar a un grupo en una situación difícil?","67":"¿Te gustaría trabajar en relaciones con otros países o con organismos internacionales?","68":"¿Disfrutarías hacer experimentos para comprobar una idea?","69":"¿Tienes precisión y buen pulso con las manos?","70":"¿Te interesaría investigar medicamentos y cómo actúan?","71":"¿Te gustaría trabajar en un banco, una cooperativa o una aseguradora?","72":"¿Sabes argumentar y sostener una postura en una discusión?","73":"¿Te gustaría servir a tu país en situaciones de riesgo?","74":"¿Disfrutarías debatir sobre temas sociales y políticos?","75":"¿Te interesaría analizar grandes cantidades de datos con computadoras?","76":"¿Notas con facilidad si los colores y las formas combinan bien?","77":"¿Te interesaría cuidar el ambiente y los recursos naturales?","78":"¿Te interesaría negociar acuerdos con proveedores o clientes?","79":"¿Entiendes con facilidad las fórmulas de física o química?","80":"¿Te interesaría aprender varios idiomas y trabajar con ellos?","81":"¿Disfrutarías trabajar con tus manos para crear piezas únicas?","82":"¿Te expresas bien con el cuerpo o la voz frente a otros?","83":"¿Te gustaría crear soluciones técnicas para problemas cotidianos?","84":"¿Te atrae la idea de usar uniforme y formar parte de una institución de servicio?","85":"¿Te gustaría planificar cómo vender mejor un producto o servicio?","86":"¿Aprendes idiomas con facilidad?","87":"¿Te gustaría trabajar en campañas de prevención de enfermedades?","88":"¿Te gustaría estudiar la Tierra, los volcanes o los suelos?","89":"¿Te gustaría acompañar a personas o comunidades a resolver sus problemas?","90":"¿Imaginas bien los objetos en tres dimensiones?","91":"¿Disfrutarías revisar que los registros y documentos estén en orden?","92":"¿Te atrae la idea de atender emergencias médicas?","93":"¿Te atrae la idea de dedicarte a la ciencia y publicar descubrimientos?","94":"¿Tienes paciencia para trabajos que requieren repetir y comprobar?","95":"¿Te atrae leer filosofía o reflexionar sobre preguntas profundas?","96":"¿Te gustaría dedicarte a una actividad donde la creatividad sea lo principal?","97":"¿Te atrae trabajar con planos, maquetas o modelos en 3D?","98":"¿Te atrae la idea de dirigir un área de una organización grande?"},"preguntas_origen":"prototipo"},"carreras":{"gamma":3.0,"normas":{"0.0":{"media":[51.194,51.149,51.227,51.194,51.23,51.302,51.31,51.2,51.326,50.977,51.2,50.599,51.345,51.2,51.31,51.325,51.287,51.044,50.841,50.727,50.687,50.606,50.663,50.848,51.013,50.634,50.629,51.152,50.707,50.776,50.9,51.025,50.876,51.065,50.82,50.83,50.818,50.698,50.895,50.661,50.834,50.977,50.368,50.516,50.516,50.564,50.57,50.563,50.588,50.558,50.563,50.559,50.568,50.57,50.828,50.645,50.789,50.612,50.559,50.637,50.559,50.559,50.787,50.645,51.305,51.29,51.349,51.345,51.345,51.34,51.279,51.307,51.28,51.159,51.157,51.29,50.94,50.684,50.666,50.952,50.094,50.315,50.581,50.072,50.084,50.299,50.389],"sd":[28.358,28.078,28.611,28.358,28.615,29.481,29.598,28.45,29.593,27.969,28.45,24.879,29.604,28.45,29.598,29.444,29.199,28.04,27.246,26.931,26.534,26.515,27.098,27.342,27.939,26.5,26.218,28.415,27.07,27.368,29.259,28.728,28.422,28.863,28.016,29.106,29.109,28.813,29.175,27.314,29.168,27.969,28.372,29.02,29.02,29.502,29.514,28.597,28.123,29.617,29.054,28.186,28.598,29.514,26.529,27.632,26.637,28.065,28.621,27.454,28.621,28.26,26.642,27.632,29.322,29.23,29.538,29.604,29.518,29.475,29.066,29.298,29.445,28.212,28.188,29.594,29.406,27.311,28.818,27.976,26.639,24.97,24.728,27.705,27.599,25.198,24.946]},"0.1":{"media":[51.053,51.021,51.073,51.053,51.085,51.153,51.16,51.059,51.164,50.839,51.059,50.508,51.171,51.059,51.16,51.153,51.117,50.907,50.701,50.602,50.557,50.476,50.541,50.707,50.858,50.508,50.504,50.982,50.58,50.65,50.755,50.868,50.737,50.907,50.686,50.686,50.674,50.56,50.751,50.542,50.689,50.839,50.256,50.383,50.383,50.421,50.427,50.424,50.457,50.415,50.424,50.428,50.429,50.427,50.71,50.539,50.677,50.505,50.457,50.528,50.457,50.453,50.676,50.539,51.12,51.12,51.165,51.171,51.162,51.157,51.097,51.135,51.143,51.031,51.028,51.152,50.796,50.57,50.52,50.819,50.031,50.242,50.493,50.001,50.013,50.212,50.299],"sd":[26.099,25.903,26.282,26.099,26.323,27.136,27.246,26.186,27.188,25.795,26.186,22.935,27.176,26.186,27.246,27.025,26.78,25.713,24.935,24.669,24.298,24.316,24.857,25.024,25.561,24.281,24.01,26.013,24.808,25.089,27.063,26.474,26.254,26.604,25.857,26.894,26.896,26.604,26.983,25.202,26.954,25.795,26.175,26.817,26.817,27.303,27.32,26.405,25.952,27.422,26.871,26.017,26.41,27.32,24.367,25.404,24.48,25.816,26.326,25.244,26.326,25.996,24.485,25.404,26.89,26.809,27.114,27.176,27.091,27.052,26.652,26.891,27.169,26.032,26.007,27.31,27.223,25.11,26.616,25.825,24.547,23.01,22.803,25.52,25.422,23.133,22.907]},"0.2":{"media":[50.913,50.893,50.918,50.913,50.939,51.004,51.011,50.918,51.003,50.702,50.918,50.417,50.997,50.918,51.011,50.98,50.948,50.77,50.561,50.478,50.427,50.345,50.419,50.566,50.703,50.382,50.38,50.812,50.453,50.524,50.611,50.711,50.598,50.748,50.552,50.542,50.531,50.422,50.608,50.424,50.544,50.702,50.143,50.251,50.251,50.279,50.284,50.285,50.326,50.273,50.286,50.298,50.289,50.284,50.593,50.433,50.566,50.398,50.355,50.419,50.355,50.347,50.565,50.433,50.935,50.951,50.981,50.997,50.978,50.973,50.915,50.964,51.005,50.903,50.899,51.014,50.651,50.456,50.374,50.686,49.969,50.169,50.404,49.93,49.941,50.126,50.209],"sd":[24.015,23.955,24.098,24.015,24.185,24.983,25.09,24.1,24.954,23.784,24.1,21.159,24.948,24.1,25.09,24.795,24.535,23.526,22.813,22.651,22.248,22.305,22.901,22.897,23.367,22.282,21.997,23.817,22.798,23.048,25.131,24.401,24.327,24.554,23.887,24.878,24.884,24.554,25.048,23.279,24.939,23.784,24.162,24.843,24.843,25.408,25.436,24.476,23.942,25.546,24.947,24.036,24.49,25.436,22.382,23.455,22.529,23.86,24.379,23.268,24.379,24.02,22.536,23.455,24.732,24.564,24.954,24.948,24.929,24.886,24.501,24.658,25.148,24.089,24.059,25.286,25.363,23.128,24.63,23.861,22.665,21.246,21.059,23.525,23.432,21.238,21.02]},"0.3":{"media":[50.772,50.765,50.764,50.772,50.794,50.855,50.862,50.777,50.841,50.565,50.777,50.325,50.823,50.777,50.862,50.807,50.779,50.634,50.421,50.353,50.296,50.215,50.297,50.425,50.548,50.256,50.256,50.643,50.326,50.398,50.467,50.554,50.459,50.59,50.418,50.398,50.387,50.284,50.464,50.305,50.399,50.565,50.031,50.119,50.119,50.137,50.14,50.146,50.195,50.13,50.147,50.167,50.149,50.14,50.475,50.327,50.454,50.292,50.253,50.31,50.253,50.241,50.453,50.327,50.751,50.781,50.796,50.823,50.794,50.79,50.733,50.793,50.868,50.774,50.771,50.876,50.507,50.341,50.227,50.552,49.907,50.097,50.316,49.86,49.87,50.039,50.118],"sd":[22.156,22.294,22.101,22.156,22.246,23.077,23.185,22.242,22.939,21.983,22.242,19.595,22.98,22.242,23.185,22.812,22.515,21.521,20.936,20.947,20.441,20.538,21.312,21.02,21.413,20.568,20.239,21.892,21.111,21.313,23.528,22.558,22.702,22.77,22.157,23.11,23.124,22.706,23.437,21.597,23.177,21.983,22.382,23.155,23.155,23.889,23.937,22.878,22.139,24.063,23.345,22.295,22.907,23.937,20.626,21.859,20.841,22.274,22.869,21.589,22.869,22.406,20.855,21.859,22.927,22.549,23.132,22.98,23.105,23.052,22.687,22.649,23.447,22.446,22.404,23.591,23.899,21.427,22.914,22.134,21.049,19.733,19.547,21.773,21.682,19.562,19.329]},"0.4":{"media":[50.632,50.636,50.609,50.632,50.648,50.706,50.712,50.636,50.679,50.427,50.636,50.234,50.649,50.636,50.712,50.634,50.609,50.497,50.282,50.228,50.166,50.084,50.175,50.284,50.393,50.129,50.131,50.473,50.198,50.272,50.322,50.397,50.321,50.432,50.284,50.254,50.244,50.146,50.32,50.187,50.254,50.427,49.918,49.987,49.987,49.995,49.997,50.007,50.064,49.988,50.009,50.037,50.009,49.997,50.357,50.222,50.342,50.185,50.151,50.201,50.151,50.135,50.342,50.222,50.566,50.612,50.612,50.649,50.61,50.606,50.551,50.622,50.73,50.646,50.642,50.738,50.363,50.227,50.081,50.419,49.844,50.024,50.228,49.789,49.799,49.952,50.028],"sd":[20.583,20.988,20.347,20.583,20.562,21.483,21.597,20.676,21.208,20.447,20.676,18.298,21.343,20.676,21.597,21.144,20.787,19.756,19.378,19.64,18.946,19.082,20.174,19.465,19.771,19.214,18.806,20.312,19.83,19.965,22.325,21.007,21.448,21.319,20.726,21.65,21.677,21.113,22.218,20.216,21.728,20.447,20.895,21.821,21.821,22.82,22.897,21.681,20.594,23.05,22.136,20.853,21.734,22.897,19.161,20.698,19.483,21.141,21.886,20.282,21.886,21.237,19.511,20.698,21.562,20.829,21.734,21.343,21.706,21.634,21.296,20.93,22.142,21.172,21.111,22.299,22.91,20.077,21.534,20.702,19.765,18.531,18.325,20.327,20.233,18.166,17.892]},"0.5":{"media":[50.491,50.508,50.455,50.491,50.503,50.557,50.563,50.495,50.518,50.29,50.495,50.143,50.475,50.495,50.563,50.461,50.44,50.36,50.142,50.103,50.036,49.954,50.053,50.143,50.239,50.003,50.007,50.304,50.071,50.146,50.178,50.239,50.182,50.274,50.15,50.11,50.1,50.008,50.176,50.068,50.109,50.29,49.806,49.855,49.855,49.852,49.854,49.868,49.933,49.845,49.87,49.906,49.869,49.854,50.239,50.116,50.23,50.079,50.049,50.092,50.049,50.029,50.23,50.116,50.381,50.442,50.428,50.475,50.426,50.423,50.369,50.45,50.593,50.517,50.514,50.6,50.218,50.113,49.934,50.286,49.782,49.951,50.139,49.718,49.727,49.865,49.938],"sd":[19.365,20.107,18.903,19.365,19.199,20.275,20.401,19.469,19.834,19.239,19.469,17.328,20.119,19.469,20.401,19.871,19.427,18.298,18.22,18.812,17.841,18.014,19.567,18.315,18.525,18.301,17.777,19.165,19.038,19.086,21.589,19.815,20.634,20.272,19.661,20.565,20.611,19.838,21.46,19.201,20.659,19.239,19.768,20.908,20.908,22.268,22.381,20.957,19.372,22.571,21.386,19.777,21.041,22.381,18.06,20.047,18.53,20.537,21.504,19.421,21.504,20.59,18.576,20.047,20.725,19.484,20.845,20.119,20.817,20.716,20.416,19.576,21.303,20.337,20.249,21.482,22.457,19.153,20.558,19.631,18.881,17.703,17.451,19.256,19.154,17.119,16.772]},"0.6":{"media":[50.35,50.38,50.3,50.35,50.357,50.409,50.414,50.354,50.356,50.153,50.354,50.052,50.301,50.354,50.414,50.288,50.27,50.224,50.002,49.978,49.905,49.823,49.931,50.002,50.084,49.877,49.882,50.134,49.944,50.02,50.034,50.082,50.043,50.115,50.016,49.966,49.957,49.869,50.033,49.95,49.964,50.153,49.693,49.723,49.723,49.71,49.71,49.729,49.802,49.703,49.731,49.775,49.729,49.71,50.121,50.01,50.118,49.972,49.947,49.983,49.947,49.923,50.119,50.01,50.197,50.272,50.243,50.301,50.242,50.239,50.187,50.279,50.456,50.389,50.385,50.462,50.074,49.998,49.788,50.152,49.72,49.879,50.051,49.647,49.656,49.778,49.848],"sd":[18.572,19.707,17.844,18.572,18.232,19.525,19.669,18.693,18.896,18.424,18.693,16.743,19.386,18.693,19.669,19.071,18.518,17.226,17.54,18.527,17.202,17.404,19.54,17.648,17.757,17.897,17.226,18.53,18.796,18.741,21.368,19.051,20.312,19.694,19.022,19.915,19.985,18.944,21.211,18.612,20.029,18.424,19.064,20.474,20.474,22.269,22.425,20.754,18.536,22.658,21.144,19.127,20.874,22.425,17.391,19.958,18.044,20.508,21.753,19.067,21.753,20.514,18.115,19.958,20.481,18.594,20.532,19.386,20.504,20.367,20.113,18.668,20.989,19.995,19.876,21.197,22.573,18.719,20.044,18.982,18.453,17.304,16.982,18.625,18.51,16.487,16.037]},"0.7":{"media":[50.21,50.252,50.146,50.21,50.212,50.26,50.264,50.213,50.194,50.015,50.213,49.961,50.127,50.213,50.264,50.116,50.101,50.087,49.862,49.854,49.775,49.693,49.809,49.861,49.929,49.751,49.758,49.964,49.817,49.894,49.889,49.925,49.904,49.957,49.882,49.822,49.814,49.731,49.889,49.832,49.819,50.015,49.581,49.591,49.591,49.568,49.567,49.59,49.672,49.56,49.593,49.645,49.589,49.567,50.003,49.904,50.006,49.865,49.845,49.874,49.845,49.817,50.007,49.904,50.012,50.103,50.059,50.127,50.058,50.056,50.004,50.108,50.318,50.261,50.257,50.325,49.929,49.884,49.641,50.019,49.658,49.806,49.963,49.577,49.585,49.691,49.757],"sd":[18.261,19.818,17.243,18.261,17.723,19.285,19.452,18.402,18.459,18.056,18.402,16.582,19.2,18.402,19.452,18.806,18.127,16.616,17.395,18.811,17.081,17.301,20.097,17.521,17.53,18.035,17.198,18.46,19.125,18.961,21.678,18.767,20.504,19.625,18.854,19.743,19.842,18.486,21.489,18.489,19.882,18.056,18.831,20.547,20.547,22.825,23.026,21.088,18.138,23.307,21.428,18.949,21.246,23.026,17.205,20.436,18.064,21.057,22.614,19.248,22.614,21.015,18.163,20.436,20.851,18.226,20.819,19.2,20.794,20.617,20.414,18.272,21.221,20.173,20.018,21.463,23.25,18.808,20.029,18.799,18.514,17.363,16.95,18.479,18.347,16.319,15.739]},"0.8":{"media":[50.069,50.123,49.991,50.069,50.066,50.111,50.115,50.072,50.033,49.878,50.072,49.87,49.953,50.072,50.115,49.943,49.932,49.951,49.723,49.729,49.644,49.562,49.687,49.72,49.774,49.625,49.633,49.795,49.69,49.768,49.745,49.768,49.765,49.799,49.748,49.678,49.67,49.593,49.745,49.713,49.674,49.878,49.468,49.459,49.459,49.426,49.424,49.451,49.541,49.418,49.454,49.514,49.45,49.424,49.886,49.798,49.894,49.759,49.743,49.765,49.743,49.711,49.896,49.798,49.827,49.933,49.875,49.953,49.874,49.873,49.822,49.937,50.181,50.132,50.128,50.187,49.785,49.77,49.495,49.886,49.595,49.733,49.874,49.506,49.513,49.604,49.667],"sd":[18.455,20.432,17.146,18.455,17.713,19.576,19.768,18.619,18.56,18.161,18.619,16.859,19.576,18.619,19.768,19.098,18.288,16.517,17.799,19.638,17.489,17.715,21.19,17.944,17.866,18.704,17.695,18.962,19.996,19.725,22.497,18.984,21.198,20.072,19.168,20.062,20.192,18.497,22.274,18.843,20.228,18.161,19.086,21.124,21.124,23.896,24.142,21.933,18.209,24.471,22.218,19.254,22.13,24.142,17.516,21.445,18.589,22.141,24.019,19.95,24.019,22.054,18.716,21.445,21.803,18.413,21.684,19.576,21.662,21.443,21.292,18.421,21.983,20.856,20.664,22.262,24.44,19.413,20.513,19.095,19.059,17.876,17.358,18.829,18.676,16.628,15.905]},"0.9":{"media":[49.929,49.995,49.837,49.929,49.921,49.962,49.966,49.931,49.871,49.741,49.931,49.779,49.779,49.931,49.966,49.77,49.762,49.814,49.583,49.604,49.514,49.432,49.565,49.579,49.619,49.499,49.509,49.625,49.563,49.642,49.601,49.611,49.626,49.641,49.614,49.534,49.527,49.455,49.601,49.595,49.529,49.741,49.356,49.327,49.327,49.283,49.281,49.312,49.41,49.275,49.316,49.384,49.31,49.281,49.768,49.692,49.783,49.652,49.641,49.656,49.641,49.605,49.784,49.692,49.642,49.764,49.69,49.779,49.69,49.689,49.64,49.766,50.043,50.004,49.999,50.049,49.64,49.655,49.348,49.752,49.533,49.661,49.786,49.435,49.442,49.518,49.577],"sd":[19.139,21.505,17.563,19.139,18.203,20.374,20.592,19.327,19.19,18.732,19.327,17.552,20.485,19.327,20.592,19.922,18.986,16.94,18.715,20.945,18.391,18.61,22.743,18.881,18.734,19.85,18.676,19.992,21.345,20.975,23.773,19.686,22.347,21.002,19.941,20.849,21.01,18.976,23.516,19.646,21.042,18.732,19.811,22.164,22.164,25.418,25.706,23.234,18.742,26.083,23.461,20.021,23.468,25.706,18.3,22.914,19.577,23.686,25.882,21.12,25.882,23.559,19.733,22.914,23.267,19.137,23.062,20.485,23.043,22.783,22.68,19.102,23.223,21.998,21.77,23.539,26.074,20.489,21.463,19.849,20.048,18.805,18.176,19.648,19.474,17.39,16.52]},"1.0":{"media":[49.788,49.867,49.682,49.788,49.775,49.813,49.816,49.79,49.71,49.603,49.79,49.688,49.605,49.79,49.816,49.597,49.593,49.677,49.443,49.479,49.384,49.302,49.443,49.438,49.464,49.372,49.384,49.455,49.435,49.516,49.456,49.454,49.487,49.482,49.48,49.39,49.383,49.317,49.457,49.476,49.384,49.603,49.243,49.195,49.195,49.141,49.137,49.173,49.279,49.133,49.177,49.253,49.17,49.137,49.65,49.586,49.671,49.545,49.539,49.547,49.539,49.499,49.673,49.586,49.458,49.594,49.506,49.605,49.506,49.506,49.458,49.594,49.906,49.876,49.871,49.911,49.496,49.541,49.202,49.619,49.471,49.588,49.698,49.364,49.371,49.431,49.486],"sd":[20.263,22.973,18.458,20.263,19.154,21.623,21.867,20.475,20.299,19.729,20.475,18.615,21.859,20.475,21.867,21.216,20.166,17.846,20.074,22.649,19.719,19.922,24.669,20.261,20.064,21.397,20.07,21.476,23.086,22.63,25.437,20.823,23.884,22.354,21.124,22.055,22.244,19.89,25.147,20.848,22.272,19.729,20.956,23.607,23.607,27.314,27.643,24.92,19.7,28.065,25.092,21.2,25.188,27.643,19.5,24.761,20.963,25.609,28.11,22.686,28.11,25.449,21.146,24.761,25.152,20.341,24.867,21.859,24.851,24.554,24.493,20.262,24.868,23.532,23.271,25.221,28.075,21.966,22.82,21.01,21.421,20.093,19.352,20.882,20.687,18.548,17.537]}},"lista":[{"id":"ingenieria-en-computacion","nombre":"Ingeniería en Computación","perfil":{"C":2,"H":1,"A":2,"S":1,"I":5,"D":3,"E":4},"habilidades":["Razonamiento lógico deductivo","Pensamiento algorítmico básico","Facilidad para matemáticas y álgebra","Capacidad de concentración prolongada"],"universidad":"Escuela Politécnica Nacional (EPN)","ciudad":"Quito"},{"id":"ingenieria-de-software","nombre":"Ingeniería de Software","perfil":{"C":2,"H":1,"A":2,"S":1,"I":5,"D":3,"E":3},"habilidades":["Lógica para descomponer problemas complejos","Curiosidad por crear programas o scripts","Paciencia para encontrar errores en secuencias","Trabajo colaborativo en proyectos grupales"],"universidad":"Universidad de las Fuerzas Armadas (ESPE)","ciudad":"Sangolquí"},{"id":"ciencia-de-datos-e-inteligencia-artificial","nombre":"Ciencia de Datos e Inteligencia Artificial","perfil":{"C":3,"H":2,"A":1,"S":2,"I":5,"D":3,"E":5},"habilidades":["Facilidad para interpretar gráficos y tablas","Razonamiento estadístico elemental","Reconocimiento de patrones numéricos","Curiosidad por clasificar y ordenar información"],"universidad":"Escuela Superior Politécnica del Litoral (ESPOL)","ciudad":"Guayaquil"},{"id":"ingenieria-mecatronica","nombre":"Ingeniería Mecatrónica","perfil":{"C":2,"H":1,"A":2,"S":1,"I":5,"D":3,"E":4},"habilidades":["Visión espacial y percepción mecánica","Habilidad manual para armar circuitos escolares","Lógica aplicada a mecanismos físicos","Facilidad para física y geometría"],"universidad":"Universidad San Francisco de Quito (USFQ)","ciudad":"Quito"},{"id":"ingenieria-civil","nombre":"Ingeniería Civil","perfil":{"C":3,"H":1,"A":3,"S":1,"I":5,"D":2,"E":4},"habilidades":["Razonamiento espacial tridimensional","Cálculo trigonométrico y geométrico","Facilidad para el dibujo técnico escolar","Interés práctico por estructuras y construcciones"],"universidad":"Universidad de Cuenca","ciudad":"Cuenca"},{"id":"ingenieria-mecanica","nombre":"Ingeniería Mecánica","perfil":{"C":2,"H":1,"A":2,"S":1,"I":5,"D":2,"E":4},"habilidades":["Comprensión de principios físicos de movimiento","Destreza manual para desarmar y reparar objetos","Razonamiento espacial para interpretar vistas","Facilidad para la física mecánica escolar"],"universidad":"Escuela Politécnica Nacional (EPN)","ciudad":"Quito"},{"id":"ingenieria-electrica","nombre":"Ingeniería Eléctrica","perfil":{"C":2,"H":1,"A":1,"S":1,"I":5,"D":2,"E":4},"habilidades":["Comprensión intuitiva de circuitos básicos","Facilidad para el álgebra y el cálculo numérico","Rigor en el seguimiento de normas de seguridad","Pensamiento analítico para resolver fallas"],"universidad":"Universidad de Cuenca","ciudad":"Cuenca"},{"id":"ingenieria-electronica-y-automatizacion","nombre":"Ingeniería Electrónica y Automatización","perfil":{"C":2,"H":1,"A":1,"S":1,"I":5,"D":3,"E":4},"habilidades":["Precisión motriz para ensamblar piezas pequeñas","Lógica de secuencias e interruptores","Interés por experimentar con robótica escolar","Razonamiento deductivo ante circuitos"],"universidad":"Universidad Politécnica Salesiana (UPS)","ciudad":"Cuenca"},{"id":"ingenieria-quimica","nombre":"Ingeniería Química","perfil":{"C":2,"H":1,"A":1,"S":2,"I":5,"D":2,"E":5},"habilidades":["Facilidad para balancear ecuaciones químicas","Meticulosidad en prácticas de laboratorio escolar","Razonamiento cuantitativo de proporciones","Observación rigurosa de reacciones y mezclas"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"ingenieria-industrial","nombre":"Ingeniería Industrial","perfil":{"C":5,"H":2,"A":1,"S":1,"I":4,"D":3,"E":3},"habilidades":["Sentido de organización de tareas y tiempos","Lógica para optimizar pasos en un proceso","Habilidad básica para coordinar actividades grupales","Facilidad para matemáticas aplicadas"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"ingenieria-en-telecomunicaciones","nombre":"Ingeniería en Telecomunicaciones","perfil":{"C":2,"H":1,"A":1,"S":1,"I":5,"D":3,"E":4},"habilidades":["Comprensión conceptual de ondas y frecuencias","Lógica matemática y razonamiento abstracto","Curiosidad por el funcionamiento de redes e internet","Habilidad para interpretar diagramas técnicos"],"universidad":"Escuela Superior Politécnica del Litoral (ESPOL)","ciudad":"Guayaquil"},{"id":"ingenieria-en-ciberseguridad","nombre":"Ingeniería en Ciberseguridad","perfil":{"C":3,"H":1,"A":1,"S":1,"I":5,"D":5,"E":3},"habilidades":["Pensamiento analítico y desconfianza metódica","Atención al detalle para detectar anomalías","Interés por reglas de acceso y privacidad digital","Lógica deductiva ante acertijos"],"universidad":"Universidad de Las Américas (UDLA)","ciudad":"Quito"},{"id":"ingenieria-en-geologia","nombre":"Ingeniería en Geología","perfil":{"C":1,"H":1,"A":1,"S":1,"I":4,"D":2,"E":5},"habilidades":["Observación detallada de rocas y paisajes","Orientación espacial y lectura de mapas","Gusto y resistencia para actividades al aire libre","Curiosidad por los procesos naturales de la Tierra"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"ingenieria-de-minas","nombre":"Ingeniería de Minas","perfil":{"C":2,"H":1,"A":1,"S":1,"I":5,"D":3,"E":4},"habilidades":["Razonamiento espacial en tres dimensiones","Comprensión práctica de fuerzas y pesos","Adaptabilidad a entornos de trabajo exigentes","Aptitud para la física y la geografía física"],"universidad":"Universidad Nacional de Loja (UNL)","ciudad":"Loja"},{"id":"ingenieria-en-petroleos","nombre":"Ingeniería en Petróleos","perfil":{"C":2,"H":1,"A":1,"S":1,"I":5,"D":2,"E":4},"habilidades":["Facilidad para matemáticas avanzadas y física","Comprensión intuitiva de fluidos y presiones","Capacidad de adaptación a trabajo de campo","Pensamiento lógico bajo condiciones rigurosas"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"ingenieria-ambiental","nombre":"Ingeniería Ambiental","perfil":{"C":2,"H":2,"A":1,"S":2,"I":4,"D":2,"E":5},"habilidades":["Sensibilidad e interés por la conservación ecológica","Comprensión básica de ciclos biogeoquímicos","Habilidad para recolectar y clasificar muestras","Interpretación de datos sobre clima y contaminación"],"universidad":"Universidad Técnica Particular de Loja (UTPL)","ciudad":"Loja"},{"id":"ingenieria-en-alimentos","nombre":"Ingeniería en Alimentos","perfil":{"C":2,"H":1,"A":1,"S":3,"I":4,"D":2,"E":5},"habilidades":["Comprensión de química orgánica básica","Interés por normas de higiene y preservación","Habilidad sensorial para distinguir olores y sabores","Precisión en medidas de peso y volumen"],"universidad":"Universidad Técnica de Ambato (UTA)","ciudad":"Ambato"},{"id":"ingenieria-biomedica","nombre":"Ingeniería Biomédica","perfil":{"C":1,"H":1,"A":1,"S":5,"I":5,"D":2,"E":4},"habilidades":["Afinidad simultánea por biología y tecnología","Lógica matemática y resolución de problemas físicos","Habilidad manual con componentes electrónicos","Interés vocacional por apoyar al sector médico"],"universidad":"Universidad de Especialidades Espíritu Santo (UEES)","ciudad":"Samborondón"},{"id":"medicina","nombre":"Medicina","perfil":{"C":1,"H":3,"A":1,"S":5,"I":2,"D":2,"E":4},"habilidades":["Facilidad para retener y relacionar conceptos biológicos","Empatía y vocación genuina de servicio","Serenidad ante situaciones de dolor o sangre","Capacidad de observación clínica elemental"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"odontologia","nombre":"Odontología","perfil":{"C":2,"H":2,"A":3,"S":5,"I":2,"D":1,"E":3},"habilidades":["Motricidad fina y precisión en los dedos","Percepción visual de proporciones y simetría","Destreza manual con instrumentos pequeños","Empatía para calmar la ansiedad de otros"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"enfermeria","nombre":"Enfermería","perfil":{"C":2,"H":4,"A":1,"S":5,"I":2,"D":2,"E":3},"habilidades":["Vocación de cuidado y apoyo a personas enfermas","Escucha activa y trato afectuoso","Resistencia física para jornadas activas de pie","Atención y disciplina para seguir instrucciones"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"psicologia-clinica","nombre":"Psicología Clínica","perfil":{"C":1,"H":5,"A":1,"S":5,"I":1,"D":2,"E":2},"habilidades":["Capacidad de escucha sin juzgar","Curiosidad por entender las emociones humanas","Observación del lenguaje corporal y verbal","Discreción y respeto por la intimidad ajena"],"universidad":"Universidad de Cuenca","ciudad":"Cuenca"},{"id":"fisioterapia","nombre":"Fisioterapia","perfil":{"C":1,"H":3,"A":2,"S":5,"I":2,"D":1,"E":2},"habilidades":["Buen conocimiento de anatomía y movimiento corporal","Fuerza y destreza en manos y brazos","Paciencia y constancia para motivar a otros","Habilidad para palpar y ubicar puntos musculares"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"nutricion-y-dietetica","nombre":"Nutrición y Dietética","perfil":{"C":2,"H":3,"A":1,"S":5,"I":1,"D":1,"E":4},"habilidades":["Facilidad para el cálculo calórico y porcentual","Interés por la composición de los alimentos","Habilidad para comunicar pautas de vida saludable","Empatía para comprender hábitos ajenos"],"universidad":"Escuela Superior Politécnica de Chimborazo (ESPOCH)","ciudad":"Riobamba"},{"id":"bioquimica-y-farmacia","nombre":"Bioquímica y Farmacia","perfil":{"C":2,"H":1,"A":1,"S":5,"I":2,"D":2,"E":5},"habilidades":["Pulcritud y exactitud en mediciones de laboratorio","Facilidad para memorizar fórmulas y compuestos químicos","Interés por los efectos de sustancias en el cuerpo","Paciencia para procesos metódicos"],"universidad":"Universidad de Cuenca","ciudad":"Cuenca"},{"id":"fonoaudiologia","nombre":"Fonoaudiología","perfil":{"C":1,"H":4,"A":2,"S":5,"I":1,"D":1,"E":2},"habilidades":["Discriminación auditiva fina de sonidos y fonemas","Dicción clara y buena modulación vocal","Paciencia para trabajar con niños y adultos mayores","Interés por los mecanismos del habla y la audición"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"terapia-ocupacional","nombre":"Terapia Ocupacional","perfil":{"C":1,"H":4,"A":3,"S":5,"I":1,"D":1,"E":2},"habilidades":["Creatividad para adaptar juegos o tareas diarias","Paciencia ante ritmos distintos de aprendizaje","Habilidad manual para confeccionar apoyos sencillos","Vocación de integración social e inclusión"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"medicina-veterinaria","nombre":"Medicina Veterinaria","perfil":{"C":2,"H":1,"A":1,"S":4,"I":1,"D":2,"E":5},"habilidades":["Afecto y respeto por los animales","Serenidad ante animales alterados o con dolor","Buena capacidad para biología y anatomía animal","Habilidad manual para sujetar y examinar animales"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"obstetricia","nombre":"Obstetricia","perfil":{"C":1,"H":3,"A":1,"S":5,"I":1,"D":2,"E":3},"habilidades":["Sensibilidad y calidez en el trato a mujeres","Tolerancia al estrés en momentos críticos","Resistencia física para guardias y atención continua","Destreza manual en maniobras de cuidado"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"radiologia-e-imagenologia","nombre":"Radiología e Imagenología","perfil":{"C":1,"H":2,"A":2,"S":5,"I":3,"D":2,"E":3},"habilidades":["Sentido de ubicación anatómica en el cuerpo humano","Facilidad para notar diferencias de sombras y contrastes","Destreza para manejar aparatos tecnológicos delicados","Disciplina estricta para cumplir normas de protección"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"administracion-de-empresas","nombre":"Administración de Empresas","perfil":{"C":5,"H":3,"A":1,"S":1,"I":2,"D":2,"E":2},"habilidades":["Capacidad para liderar y organizar compañeros de clase","Iniciativa para proponer actividades o proyectos","Facilidad para comunicarse con distintos tipos de personas","Sentido común para administrar dinero y recursos"],"universidad":"Universidad San Francisco de Quito (USFQ)","ciudad":"Quito"},{"id":"economia","nombre":"Economía","perfil":{"C":5,"H":3,"A":1,"S":1,"I":2,"D":2,"E":4},"habilidades":["Pensamiento analítico sobre noticias de actualidad","Facilidad para interpretar gráficos y fórmulas","Curiosidad por cómo funcionan los mercados y precios","Razonamiento lógico deductivo"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"contabilidad-y-auditoria","nombre":"Contabilidad y Auditoría","perfil":{"C":5,"H":1,"A":1,"S":1,"I":2,"D":3,"E":3},"habilidades":["Habilidad para operaciones aritméticas rápidas","Orden riguroso en apuntes y registros","Meticulosidad para cuadrar cifras y revisar errores","Gusto por clasificar comprobantes y facturas"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"finanzas","nombre":"Finanzas","perfil":{"C":5,"H":1,"A":1,"S":1,"I":2,"D":2,"E":4},"habilidades":["Facilidad para el cálculo numérico y porcentajes","Interés por el ahorro, presupuestos y rentabilidad","Capacidad para evaluar riesgos sencillos","Pensamiento lógico matemático aplicado"],"universidad":"Escuela Politécnica Nacional (EPN)","ciudad":"Quito"},{"id":"marketing","nombre":"Marketing","perfil":{"C":5,"H":3,"A":4,"S":1,"I":2,"D":1,"E":2},"habilidades":["Creatividad para captar la atención de la gente","Facilidad para persuadir y vender ideas o productos","Comprensión de gustos y tendencias de grupos","Habilidad verbal y comunicativa"],"universidad":"Universidad de Las Américas (UDLA)","ciudad":"Quito"},{"id":"comercio-exterior","nombre":"Comercio Exterior","perfil":{"C":5,"H":4,"A":1,"S":1,"I":2,"D":2,"E":2},"habilidades":["Facilidad e interés por aprender otros idiomas","Curiosidad por la geografía económica y otras culturas","Habilidad de negociación y trato respetuoso","Orden para revisar requisitos y trámites"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"gestion-del-talento-humano","nombre":"Gestión del Talento Humano","perfil":{"C":5,"H":4,"A":1,"S":2,"I":1,"D":2,"E":1},"habilidades":["Empatía y facilidad para relacionarse con personas","Capacidad para mediar en discusiones entre compañeros","Habilidad para identificar fortalezas en otros","Buena comunicación oral y escrita"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"administracion-publica","nombre":"Administración Pública","perfil":{"C":5,"H":5,"A":1,"S":1,"I":1,"D":3,"E":2},"habilidades":["Interés por las leyes cívicas y el rol del Estado","Compromiso con el bienestar colectivo y comunitario","Habilidad para redactar oficios y documentos formales","Sentido de ética y apego a reglamentos"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"gestion-y-emprendimiento","nombre":"Gestión y Emprendimiento","perfil":{"C":5,"H":3,"A":2,"S":1,"I":2,"D":2,"E":2},"habilidades":["Iniciativa para empezar proyectos sin esperar órdenes","Capacidad para convencer a otros de unirse a una idea","Resiliencia para tolerar el fracaso y volver a intentar","Visión práctica para resolver necesidades del entorno"],"universidad":"Universidad del Azuay (UDA)","ciudad":"Cuenca"},{"id":"auditoria-y-control-de-gestion","nombre":"Auditoría y Control de Gestión","perfil":{"C":5,"H":2,"A":1,"S":1,"I":2,"D":4,"E":3},"habilidades":["Espíritu curioso que verifica antes de confiar","Atención minuciosa a detalles que otros pasan por alto","Habilidad numérica para corroborar sumas y restas","Disciplina para seguir pautas de revisión"],"universidad":"Escuela Superior Politécnica del Litoral (ESPOL)","ciudad":"Guayaquil"},{"id":"administracion-turistica-y-hotelera","nombre":"Administración Turística y Hotelera","perfil":{"C":5,"H":4,"A":2,"S":1,"I":1,"D":1,"E":2},"habilidades":["Actitud servicial, amable y sonriente","Gusto por viajar y conocer tradiciones diversas","Facilidad para expresarse en público y en otros idiomas","Sentido de hospitalidad y orden en eventos"],"universidad":"Universidad de Especialidades Espíritu Santo (UEES)","ciudad":"Samborondón"},{"id":"gestion-de-la-produccion-y-logistica","nombre":"Gestión de la Producción y Logística","perfil":{"C":5,"H":2,"A":1,"S":1,"I":4,"D":3,"E":3},"habilidades":["Sentido práctico para organizar espacios y materiales","Habilidad para planear rutas y tiempos de entrega","Coordinación de tareas secuenciales","Razonamiento numérico para calcular cantidades"],"universidad":"Universidad de Las Américas (UDLA)","ciudad":"Quito"},{"id":"derecho","nombre":"Derecho","perfil":{"C":3,"H":5,"A":1,"S":1,"I":1,"D":4,"E":1},"habilidades":["Facilidad para la expresión oral y argumentación","Hábito de lectura constante y comprensión crítica","Interés por la justicia y resolución de conflictos","Habilidad para fundamentar opiniones con normas"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"relaciones-internacionales","nombre":"Relaciones Internacionales","perfil":{"C":3,"H":5,"A":1,"S":1,"I":1,"D":3,"E":1},"habilidades":["Facilidad para expresarse en varios idiomas","Interés por la historia mundial y la política exterior","Tacto diplomático y cortesía al debatir","Pensamiento estratégico y visión global"],"universidad":"Universidad San Francisco de Quito (USFQ)","ciudad":"Quito"},{"id":"ciencias-politicas","nombre":"Ciencias Políticas","perfil":{"C":3,"H":5,"A":1,"S":1,"I":1,"D":3,"E":1},"habilidades":["Pasión por el debate de temas de actualidad","Capacidad de análisis crítico de discursos y noticias","Liderazgo cívico en gobiernos estudiantiles","Habilidad para redactar ensayos argumentativos"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"sociologia","nombre":"Sociología","perfil":{"C":2,"H":5,"A":1,"S":1,"I":1,"D":2,"E":2},"habilidades":["Curiosidad por entender las costumbres de los grupos","Sensibilidad ante las desigualdades sociales","Capacidad de observación de comportamientos colectivos","Hábito de lectura y pensamiento crítico"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"antropologia","nombre":"Antropología","perfil":{"C":1,"H":5,"A":2,"S":1,"I":1,"D":1,"E":2},"habilidades":["Curiosidad por la diversidad cultural y tradiciones","Habilidad de escucha y respeto por visiones distintas","Interés por la historia antigua y arqueología","Capacidad para tomar notas descriptivas del entorno"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"trabajo-social","nombre":"Trabajo Social","perfil":{"C":2,"H":5,"A":1,"S":3,"I":1,"D":2,"E":1},"habilidades":["Empatía y compromiso con personas vulnerables","Facilidad para conversar y ganarse la confianza","Disposición solidaria para apoyar en problemas sociales","Capacidad para articular apoyos comunitarios"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"comunicacion-y-periodismo","nombre":"Comunicación y Periodismo","perfil":{"C":3,"H":5,"A":4,"S":1,"I":2,"D":2,"E":1},"habilidades":["Curiosidad investigativa para formular preguntas","Facilidad para redactar historias claras y atractivas","Desenvoltura para hablar frente a una cámara o público","Hábito constante de informarse sobre noticias"],"universidad":"Universidad de Las Américas (UDLA)","ciudad":"Quito"},{"id":"pedagogia-de-idiomas-extranjeros","nombre":"Pedagogía de Idiomas Extranjeros","perfil":{"C":1,"H":5,"A":2,"S":1,"I":1,"D":1,"E":1},"habilidades":["Facilidad de pronunciación y aprendizaje de idiomas","Paciencia para explicar un tema varias veces","Claridad para dar instrucciones sencillas","Dinamismo y entusiasmo para hablar en público"],"universidad":"Universidad de Cuenca","ciudad":"Cuenca"},{"id":"educacion-basica","nombre":"Educación Básica","perfil":{"C":2,"H":5,"A":3,"S":1,"I":1,"D":1,"E":1},"habilidades":["Vocación para enseñar y convivir con niños","Creatividad para idear juegos y dinámicas de estudio","Claridad para explicar conceptos difíciles de forma simple","Paciencia y manejo tranquilo de grupos"],"universidad":"Universidad Nacional de Educación (UNAE)","ciudad":"Azogues"},{"id":"educacion-inicial","nombre":"Educación Inicial","perfil":{"C":1,"H":5,"A":4,"S":2,"I":1,"D":1,"E":1},"habilidades":["Afecto y paciencia con niños pequeños","Expresividad corporal, gestual y canto","Habilidad manual para hacer manualidades didácticas","Capacidad para mantener la calma ante rabietas"],"universidad":"Universidad Nacional de Educación (UNAE)","ciudad":"Azogues"},{"id":"psicopedagogia","nombre":"Psicopedagogía","perfil":{"C":1,"H":5,"A":2,"S":3,"I":1,"D":1,"E":1},"habilidades":["Paciencia para entender por qué a alguien le cuesta aprender","Observación de métodos y hábitos de estudio","Creatividad para proponer formas distintas de enseñar","Trato comprensivo y motivador"],"universidad":"Universidad Técnica Particular de Loja (UTPL)","ciudad":"Loja"},{"id":"filosofia","nombre":"Filosofía","perfil":{"C":1,"H":5,"A":2,"S":1,"I":1,"D":1,"E":2},"habilidades":["Gusto por reflexionar sobre preguntas profundas","Habilidad para detectar contradicciones en argumentos","Hábito de lectura de textos complejos","Rigor para definir conceptos y razonar con lógica"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"arquitectura","nombre":"Arquitectura","perfil":{"C":2,"H":2,"A":5,"S":1,"I":4,"D":1,"E":3},"habilidades":["Visión espacial y capacidad de imaginar volúmenes","Habilidad para el dibujo a mano y geométrico","Sensibilidad por la estética y el orden visual","Creatividad para distribuir espacios funcionales"],"universidad":"Universidad San Francisco de Quito (USFQ)","ciudad":"Quito"},{"id":"diseno-grafico","nombre":"Diseño Gráfico","perfil":{"C":2,"H":2,"A":5,"S":1,"I":3,"D":1,"E":1},"habilidades":["Creatividad visual y combinación armónica de colores","Habilidad para dibujar o componer imágenes","Curiosidad por tipografías, logotipos y carteles","Capacidad para transmitir un mensaje con una imagen"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"diseno-de-productos-e-industrial","nombre":"Diseño de Productos e Industrial","perfil":{"C":2,"H":1,"A":5,"S":1,"I":4,"D":1,"E":2},"habilidades":["Habilidad para bocetar objetos útiles a mano","Curiosidad por cómo están fabricadas las cosas","Imaginación espacial para resolver problemas prácticos","Destreza manual con materiales sencillos"],"universidad":"Escuela Superior Politécnica del Litoral (ESPOL)","ciudad":"Guayaquil"},{"id":"diseno-de-modas","nombre":"Diseño de Modas","perfil":{"C":3,"H":1,"A":5,"S":1,"I":2,"D":1,"E":1},"habilidades":["Sentido estético para combinar telas, colores y texturas","Habilidad manual para cortar y coser a mano","Facilidad para dibujar figuras humanas y prendas","Interés por tendencias y estilos de vestimenta"],"universidad":"Universidad de Especialidades Espíritu Santo (UEES)","ciudad":"Samborondón"},{"id":"artes-visuales","nombre":"Artes Visuales","perfil":{"C":1,"H":2,"A":5,"S":1,"I":1,"D":1,"E":1},"habilidades":["Talento y gusto constante por pintar o dibujar","Imaginación para expresar emociones a través del arte","Originalidad para experimentar con técnicas plásticas","Dedicación y paciencia en la creación de obras"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"cine-y-medios-audiovisuales","nombre":"Cine y Medios Audiovisuales","perfil":{"C":2,"H":3,"A":5,"S":1,"I":3,"D":1,"E":1},"habilidades":["Imaginación para contar historias en imágenes","Curiosidad por el manejo de cámaras, luces y planos","Sentido del ritmo al juntar escenas o música","Facilidad para trabajar en equipo en grabaciones"],"universidad":"Universidad San Francisco de Quito (USFQ)","ciudad":"Quito"},{"id":"artes-musicales","nombre":"Artes Musicales","perfil":{"C":1,"H":2,"A":5,"S":1,"I":1,"D":1,"E":1},"habilidades":["Oído musical para identificar notas y ritmos","Facilidad para tocar un instrumento o cantar","Memoria auditiva para recordar secuencias melódicas","Disciplina para la práctica diaria constante"],"universidad":"Universidad de las Artes (UArtes)","ciudad":"Guayaquil"},{"id":"artes-escenicas-y-teatro","nombre":"Artes Escénicas y Teatro","perfil":{"C":1,"H":3,"A":5,"S":1,"I":1,"D":1,"E":1},"habilidades":["Expresión corporal suelta y voz proyectada","Capacidad para memorizar guiones y diálogos","Empatía para meterse en el papel de otro personaje","Espontaneidad y desenvolvimiento escénico"],"universidad":"Universidad de las Artes (UArtes)","ciudad":"Guayaquil"},{"id":"animacion-digital-y-videojuegos","nombre":"Animación Digital y Videojuegos","perfil":{"C":1,"H":1,"A":5,"S":1,"I":4,"D":1,"E":2},"habilidades":["Creatividad para dibujar personajes en movimiento","Interés por cómo funcionan las mecánicas de los juegos","Paciencia para trabajar paso a paso de forma metódica","Pensamiento visual y espacial"],"universidad":"Escuela Superior Politécnica del Litoral (ESPOL)","ciudad":"Guayaquil"},{"id":"diseno-de-interiores","nombre":"Diseño de Interiores","perfil":{"C":2,"H":2,"A":5,"S":1,"I":3,"D":1,"E":1},"habilidades":["Percepción del espacio, la iluminación y los colores","Gusto por acomodar y decorar habitaciones","Habilidad para dibujar planos sencillos de distribución","Sensibilidad para crear ambientes acogedores"],"universidad":"Universidad de Las Américas (UDLA)","ciudad":"Quito"},{"id":"biologia","nombre":"Biología","perfil":{"C":1,"H":1,"A":1,"S":3,"I":2,"D":1,"E":5},"habilidades":["Pasión por observar seres vivos y ecosistemas","Habilidad para el uso cuidadoso del microscopio escolar","Curiosidad por la clasificación de plantas y animales","Capacidad de asombro y método ante la naturaleza"],"universidad":"Pontificia Universidad Católica del Ecuador (PUCE)","ciudad":"Quito"},{"id":"biotecnologia","nombre":"Biotecnología","perfil":{"C":1,"H":1,"A":1,"S":3,"I":4,"D":2,"E":5},"habilidades":["Interés por la genética y la microbiología escolar","Meticulosidad en el manejo de tubos y mezclas","Razonamiento científico para seguir pasos de laboratorio","Facilidad para la química y la biología"],"universidad":"Universidad de las Fuerzas Armadas (ESPE)","ciudad":"Sangolquí"},{"id":"matematicas","nombre":"Matemáticas","perfil":{"C":2,"H":1,"A":1,"S":1,"I":3,"D":2,"E":5},"habilidades":["Pasión por resolver acertijos numéricos y problemas","Razonamiento deductivo abstracto","Gusto por buscar demostraciones lógicas","Concentración y perseverancia ante ejercicios difíciles"],"universidad":"Escuela Politécnica Nacional (EPN)","ciudad":"Quito"},{"id":"fisica","nombre":"Física","perfil":{"C":1,"H":1,"A":1,"S":1,"I":4,"D":2,"E":5},"habilidades":["Curiosidad por las leyes que rigen el universo","Facilidad para aplicar fórmulas matemáticas a hechos reales","Pensamiento abstracto y deducción lógica","Habilidad para realizar experimentos sencillos de laboratorio"],"universidad":"Escuela Politécnica Nacional (EPN)","ciudad":"Quito"},{"id":"quimica","nombre":"Química","perfil":{"C":1,"H":1,"A":1,"S":2,"I":3,"D":2,"E":5},"habilidades":["Interés por la estructura molecular y los elementos","Cuidado y pulcritud con sustancias y reactivos","Facilidad para calcular proporciones y estequiometría","Memoria y comprensión de la tabla periódica"],"universidad":"Escuela Politécnica Nacional (EPN)","ciudad":"Quito"},{"id":"agronomia","nombre":"Agronomía","perfil":{"C":2,"H":1,"A":1,"S":2,"I":3,"D":2,"E":5},"habilidades":["Gusto por el trabajo con la tierra y los cultivos","Interés por el crecimiento de las plantas y plagas","Resistencia física para labores bajo el sol","Observación de los cambios en el clima y el suelo"],"universidad":"Universidad Central del Ecuador (UCE)","ciudad":"Quito"},{"id":"zootecnia","nombre":"Zootecnia","perfil":{"C":2,"H":1,"A":1,"S":3,"I":2,"D":2,"E":5},"habilidades":["Afinidad por el cuidado y alimentación del ganado","Observación de la salud y desarrollo de animales","Disposición para labores prácticas en granjas","Razonamiento práctico para cuidar recursos pecuarios"],"universidad":"Escuela Superior Politécnica de Chimborazo (ESPOCH)","ciudad":"Riobamba"},{"id":"agroindustria","nombre":"Agroindustria","perfil":{"C":3,"H":1,"A":1,"S":2,"I":4,"D":2,"E":5},"habilidades":["Interés por la elaboración de conservas y derivados","Sentido de higiene en el manejo de materias primas","Habilidad práctica para seguir recetas técnicas","Orden para empaquetar y almacenar productos"],"universidad":"Escuela Superior Politécnica Agropecuaria de Manabí (ESPAM)","ciudad":"Calceta"},{"id":"tecnologia-superior-en-desarrollo-de-software","nombre":"Tecnología Superior en Desarrollo de Software","perfil":{"C":2,"H":1,"A":2,"S":1,"I":5,"D":2,"E":3},"habilidades":["Lógica para seguir instrucciones paso a paso","Facilidad para aprender lenguajes de programación escolar","Curiosidad por crear páginas web o aplicaciones sencillas","Paciencia para corregir líneas de código"],"universidad":"Instituto Superior Tecnológico Sucre","ciudad":"Quito"},{"id":"tecnologia-superior-en-electromecanica","nombre":"Tecnología Superior en Electromecánica","perfil":{"C":1,"H":1,"A":1,"S":1,"I":5,"D":3,"E":3},"habilidades":["Habilidad manual con herramientas de mano","Interés por el funcionamiento de motores y bombas","Lectura básica de diagramas de conexiones","Precaución y disciplina con el uso de herramientas"],"universidad":"Escuela Politécnica Nacional (ESFOT)","ciudad":"Quito"},{"id":"tecnologia-superior-en-redes-y-telecomunicaciones","nombre":"Tecnología Superior en Redes y Telecomunicaciones","perfil":{"C":2,"H":1,"A":1,"S":1,"I":5,"D":3,"E":3},"habilidades":["Habilidad motriz para armar cables y conectores de red","Curiosidad por conectar computadoras e impresoras","Orden y prolijidad para organizar cables e instalaciones","Facilidad para seguir manuales de configuración básica"],"universidad":"Instituto Superior Tecnológico Central Técnico","ciudad":"Quito"},{"id":"tecnologia-superior-en-mecanica-automotriz","nombre":"Tecnología Superior en Mecánica Automotriz","perfil":{"C":2,"H":1,"A":1,"S":1,"I":5,"D":2,"E":3},"habilidades":["Afinidad práctica por autos, motos y motores","Destreza manual con herramientas de taller","Habilidad para escuchar ruidos y buscar fallas mecánicas","Disposición para el trabajo físico en talleres"],"universidad":"Instituto Superior Tecnológico Central Técnico","ciudad":"Quito"},{"id":"tecnologia-superior-en-contabilidad","nombre":"Tecnología Superior en Contabilidad","perfil":{"C":5,"H":1,"A":1,"S":1,"I":2,"D":2,"E":2},"habilidades":["Rapidez en operaciones básicas de suma y resta","Prolijidad en el llenado de planillas y comprobantes","Atención al detalle para no omitir ningún dato","Gusto por el orden en carpetas y registros numéricos"],"universidad":"Instituto Superior Tecnológico Sucre","ciudad":"Quito"},{"id":"tecnologia-superior-en-gastronomia","nombre":"Tecnología Superior en Gastronomía","perfil":{"C":3,"H":1,"A":4,"S":2,"I":2,"D":1,"E":2},"habilidades":["Destreza motriz para picar ingredientes y manipular sartenes","Sentido del gusto y olfato para sazonar preparaciones","Rapidez para trabajar con orden y limpieza en cocina","Resistencia física para permanecer de pie cocinando"],"universidad":"Instituto Superior Tecnológico Rumiñahui","ciudad":"Sangolquí"},{"id":"tecnologia-superior-en-guia-nacional-de-turismo","nombre":"Tecnología Superior en Guía Nacional de Turismo","perfil":{"C":3,"H":5,"A":2,"S":1,"I":1,"D":2,"E":3},"habilidades":["Facilidad de palabra y carisma frente a grupos","Conocimiento y entusiasmo por sitios turísticos","Buena condición física para caminatas y recorridos","Sentido de orientación y calma ante imprevistos"],"universidad":"Instituto Superior Tecnológico Sucre","ciudad":"Quito"},{"id":"tecnologia-superior-en-logistica-y-transporte","nombre":"Tecnología Superior en Logística y Transporte","perfil":{"C":5,"H":1,"A":1,"S":1,"I":4,"D":3,"E":2},"habilidades":["Orden para contar cajas y llevar listas de control","Habilidad espacial para acomodar paquetes en bodegas","Sentido de puntualidad para coordinar entregas","Atención para cotejar notas de entrega con mercadería"],"universidad":"Instituto Superior Tecnológico Guayaquil","ciudad":"Guayaquil"},{"id":"oficial-de-ejercito-ciencias-militares","nombre":"Oficial de Ejército (Ciencias Militares)","perfil":{"C":3,"H":3,"A":1,"S":2,"I":3,"D":5,"E":2},"habilidades":["Disciplina y respeto por la jerarquía","Liderazgo en grupos","Resistencia física","Toma de decisiones bajo presión"],"universidad":"Escuela Superior Militar Eloy Alfaro (ESMIL)","ciudad":"Quito"},{"id":"oficial-de-marina-ciencias-navales","nombre":"Oficial de Marina (Ciencias Navales)","perfil":{"C":2,"H":2,"A":1,"S":1,"I":4,"D":5,"E":3},"habilidades":["Disciplina y trabajo en equipo","Orientación y lectura de mapas","Aptitud para física y matemáticas","Adaptación a entornos exigentes"],"universidad":"Escuela Superior Naval (ESSUNA)","ciudad":"Salinas"},{"id":"oficial-de-aviacion-militar","nombre":"Oficial de Aviación Militar","perfil":{"C":2,"H":1,"A":1,"S":1,"I":5,"D":5,"E":3},"habilidades":["Razonamiento espacial","Aptitud para física y matemáticas","Serenidad ante el riesgo","Disciplina y precisión"],"universidad":"Escuela Superior Militar de Aviación (ESMA)","ciudad":"Salinas"},{"id":"ciencias-policiales-y-seguridad-ciudadana","nombre":"Ciencias Policiales y Seguridad Ciudadana","perfil":{"C":3,"H":4,"A":1,"S":2,"I":1,"D":5,"E":1},"habilidades":["Sentido de justicia y servicio","Comunicación y mediación","Resistencia física","Apego a normas y ética"],"universidad":"Universidad de Seguridad Ciudadana y Ciencias Policiales","ciudad":"Quito"},{"id":"seguridad-ciudadana","nombre":"Seguridad Ciudadana","perfil":{"C":3,"H":4,"A":1,"S":2,"I":2,"D":5,"E":1},"habilidades":["Interés por la convivencia y la prevención","Análisis de problemas sociales","Comunicación con la comunidad","Trabajo con instituciones públicas"],"universidad":"Universidad Internacional SEK (UISEK)","ciudad":"Quito"},{"id":"criminalistica","nombre":"Criminalística","perfil":{"C":1,"H":3,"A":1,"S":3,"I":2,"D":5,"E":4},"habilidades":["Observación minuciosa","Rigor en laboratorio","Razonamiento deductivo","Discreción y ética"],"universidad":"Universidad Estatal de Bolívar (UEB)","ciudad":"Guaranda"},{"id":"gestion-de-riesgos-y-desastres","nombre":"Gestión de Riesgos y Desastres","perfil":{"C":3,"H":2,"A":1,"S":3,"I":3,"D":5,"E":4},"habilidades":["Calma ante emergencias","Lectura de mapas y clima","Coordinación de equipos","Planificación y prevención"],"universidad":"POR CONFIRMAR","ciudad":"POR CONFIRMAR"}]},"mapeo":[["student council|stuco|class officer|model united|\\bmun\\b|basketball|volleyball|football|soccer|varsity|\\bjv\\b|discipleship",0,{}],["conduct|conducta",0,{}],["bible|biblia|chapel|christian|cristian",0,{}],["physical ed|\\bp\\.?e\\.?\\b|educaci[oó]n f[ií]sica",0,{}],["composition|narrativ|escritura|redacci",1,{"C":1,"H":3,"A":1}],["homeroom|advisory|study hall|extracurric|club",0,{}],["computer|programming|robotic|coding|inform[aá]tica|technology|tecnolog",1,{"I":3,"E":1}],["econom|business|accounting|contab|finance|emprend",1,{"C":3,"H":1,"E":1}],["psycholog|sociolog|psicolog",1,{"H":2,"S":2}],["health|salud|anatomy|anatom",1,{"S":3,"E":1}],["calculus|c[aá]lculo|statistic|estad[ií]stic",1,{"C":1,"I":2,"E":3}],["math|algebra|geometr|matem|trigonom",1,{"C":1,"I":2,"E":3}],["physic|f[ií]sica",1,{"I":3,"E":3}],["chemi|qu[ií]mica",1,{"S":2,"I":1,"E":3}],["biolog|life science|ciencias de la vida",1,{"S":3,"E":2}],["science|ciencias",1,{"S":1,"I":1,"E":2}],["\\bart\\b|arts|arte|dibujo|drawing|design|dise[nñ]o|paint",1,{"A":3}],["music|m[uú]sica|band|choir|coro",1,{"A":3}],["drama|theat|teatro",1,{"H":1,"A":3}],["histor|social stud|estudios sociales|government|civic|geograph|c[ií]vica",1,{"C":1,"H":3,"D":1}],["english|language arts|reading|writing|literat|ingl[eé]s|lengua|spanish|espa[nñ]ol|french|franc",1,{"C":1,"H":3,"A":1}]]};</script>
+<script>
+/* Figuras de profesión — dibujo SVG propio de la interfaz original del proyecto (mismo código), con un vestuario agregado para Seguridad y defensa. */
+(() => {
+  const SKIN = '#F6C92C', SKIN_DARK = '#D9A900', FACE = '#1F2330';
+  const OUTFITS = [
+    { id:'seguridad', re:/militar|ej[eé]rcito|naval|marina|policial|seguridad ciudadana|criminal[ií]stic|riesgos/, torso:'#4B5A3A', legs:'#3A4630', jacket:true, hat:'cap', prop:'shield', label:'Seguridad y defensa' },
+    { id:'salud',      re:/medicina|enfermer|odontolog|obstetric|fisioterap|radiolog|terapia|fonoaudiolog|nutrici/, torso:'#FFFFFF', legs:'#4DA3D6', coat:true, prop:'steth', label:'Salud' },
+    { id:'vet',        re:/veterinari|zootecn/, torso:'#3FA37A', legs:'#2E7D5B', prop:'steth', label:'Veterinaria' },
+    { id:'ciencia',    re:/bioqu|qu[ií]mica|biotecnolog|biolog|f[ií]sica|matem[aá]tic|farmacia|alimentos/, torso:'#FFFFFF', legs:'#2F4A7A', coat:true, hat:'goggles', prop:'flask', label:'Ciencia' },
+    { id:'obra',       re:/civil|minas|geolog|petr[oó]leo|arquitect/, torso:'#F28C28', legs:'#2F4A7A', vest:true, hat:'hardhat', prop:'plan', label:'Construcción' },
+    { id:'tecnico',    re:/mec[aá]nic|mecatr[oó]nic|el[eé]ctric|electr[oó]nic|automotriz|electromec|industrial|producci/, torso:'#2F6DB5', legs:'#2F6DB5', overall:true, hat:'hardhatWhite', prop:'wrench', label:'Técnica' },
+    { id:'tech',       re:/computaci|software|datos|ciberseg|telecom|redes|animaci|videojuego/, torso:'#2B3A55', legs:'#3E5C8A', hoodie:true, hat:'headset', prop:'laptop', label:'Tecnología' },
+    { id:'ley',        re:/derecho|relaciones internacionales|pol[ií]tic|p[uú]blica/, torso:'#1E2433', legs:'#1E2433', suit:true, tie:'#2A78D6', prop:'briefcase', label:'Leyes' },
+    { id:'negocio',    re:/administraci|econom|finanz|contab|auditor|marketing|comercio|gesti[oó]n|talento|log[ií]stic/, torso:'#23355C', legs:'#23355C', suit:true, tie:'#D23F3F', prop:'chart', label:'Negocios' },
+    { id:'docente',    re:/educaci|pedagog|idiomas/, torso:'#8E3B4E', legs:'#3B4252', cardigan:true, prop:'book', label:'Educación' },
+    { id:'social',     re:/psicolog|trabajo social|sociolog|antropolog|filosof/, torso:'#6A55B5', legs:'#3B4252', prop:'notebook', label:'Social' },
+    { id:'medios',     re:/comunicaci|periodis|cine|audiovisual/, torso:'#C0392B', legs:'#2B3A55', jacket:true, prop:'mic', label:'Medios' },
+    { id:'arte',       re:/arte|dise[nñ]o|moda|interiores|teatro|m[uú]sic/, torso:'#F2F2F2', legs:'#2B3A55', stripes:true, hat:'beret', prop:'palette', label:'Arte' },
+    { id:'chef',       re:/gastronom/, torso:'#FFFFFF', legs:'#5B6576', chef:true, hat:'chef', prop:'spoon', label:'Gastronomía' },
+    { id:'turismo',    re:/turis|hotel/, torso:'#1F3B73', legs:'#1F3B73', suit:true, tie:'#EDA100', hat:'cap', prop:'suitcase', label:'Turismo' },
+    { id:'campo',      re:/agronom|agroindustr|ambiental/, torso:'#5E8C31', legs:'#6B4F2A', hat:'straw', prop:'sprout', label:'Campo y ambiente' },
+  ];
+  const OUTFIT_DEFAULT = { id:'general', torso:'#2A78D6', legs:'#2F4A7A', prop:null, label:'Profesional' };
+  function outfitFor(careerName){
+    const n = careerName.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+    return OUTFITS.find(o=>o.re.test(n) || o.re.test(careerName.toLowerCase())) || OUTFIT_DEFAULT;
+  }
+
+  function figureSVG(o, gender){
+    const P = [];
+    const ln = 'stroke="rgba(15,23,42,.35)" stroke-width="1"';
+    // pelo largo detrás de la cabeza (mujer)
+    if (gender==='F') P.push(`<path d="M34 58 Q34 32 60 31 Q86 32 86 58 L88 104 Q80 108 74 102 L76 64 L44 64 L46 102 Q40 108 32 104 Z" fill="#7A3E1D"/>`);
+    // piernas y cadera
+    P.push(`<rect x="37" y="146" width="46" height="12" rx="2" fill="${o.legs}" ${ln}/>`);
+    P.push(`<rect x="37" y="156" width="22" height="40" rx="3" fill="${o.legs}" ${ln}/>`);
+    P.push(`<rect x="61" y="156" width="22" height="40" rx="3" fill="${o.legs}" ${ln}/>`);
+    P.push(`<rect x="37" y="190" width="22" height="6" rx="2" fill="rgba(0,0,0,.18)"/><rect x="61" y="190" width="22" height="6" rx="2" fill="rgba(0,0,0,.18)"/>`);
+    // brazos (mangas) y manos
+    const sleeve = o.vest ? '#8A93A3' : (o.overall ? '#E9EEF5' : o.torso);
+    P.push(`<path d="M42 96 L30 100 L22 134 L34 137 L41 112 Z" fill="${sleeve}" ${ln}/>`);
+    P.push(`<path d="M78 96 L90 100 L98 134 L86 137 L79 112 Z" fill="${sleeve}" ${ln}/>`);
+    P.push(`<circle cx="27" cy="141" r="7" fill="${SKIN}" stroke="${SKIN_DARK}" stroke-width="1.2"/><circle cx="93" cy="141" r="7" fill="${SKIN}" stroke="${SKIN_DARK}" stroke-width="1.2"/>`);
+    // torso
+    P.push(`<path d="M43 92 L77 92 L84 147 L36 147 Z" fill="${o.torso}" ${ln}/>`);
+    if (o.overall){ P.push(`<path d="M43 92 L77 92 L84 147 L36 147 Z" fill="#E9EEF5"/><path d="M47 108 L73 108 L80 147 L40 147 Z" fill="${o.torso}"/><rect x="47" y="92" width="5" height="18" fill="${o.torso}"/><rect x="68" y="92" width="5" height="18" fill="${o.torso}"/><rect x="54" y="116" width="12" height="9" rx="1" fill="rgba(0,0,0,.15)"/>`); }
+    if (o.vest){ P.push(`<path d="M43 92 L77 92 L84 147 L36 147 Z" fill="#8A93A3"/><path d="M44 92 L56 92 L55 147 L37 147 Z" fill="${o.torso}"/><path d="M64 92 L76 92 L83 147 L65 147 Z" fill="${o.torso}"/><rect x="38" y="124" width="17" height="4" fill="#FFE14D"/><rect x="65" y="124" width="17" height="4" fill="#FFE14D"/>`); }
+    if (o.suit){ P.push(`<path d="M52 92 L60 112 L68 92 Z" fill="#FFFFFF"/><path d="M58 96 L62 96 L63 116 L60 121 L57 116 Z" fill="${o.tie}"/><path d="M52 92 L60 118 L48 104 Z" fill="rgba(255,255,255,.12)"/><path d="M68 92 L60 118 L72 104 Z" fill="rgba(255,255,255,.12)"/>`); }
+    if (o.coat){ P.push(`<path d="M53 92 L60 106 L67 92 Z" fill="#9CC3E8"/><line x1="60" y1="106" x2="60" y2="147" stroke="rgba(15,23,42,.25)" stroke-width="1.2"/><rect x="66" y="112" width="9" height="7" rx="1" fill="none" stroke="rgba(15,23,42,.25)"/>`); }
+    if (o.cardigan){ P.push(`<path d="M52 92 L60 108 L68 92 L65 147 L55 147 Z" fill="#F4EFE6"/><circle cx="57" cy="122" r="1.4" fill="#F4EFE6"/><circle cx="57" cy="134" r="1.4" fill="#F4EFE6"/>`); }
+    if (o.hoodie){ P.push(`<path d="M47 92 Q60 104 73 92" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/><rect x="50" y="126" width="20" height="10" rx="3" fill="rgba(255,255,255,.12)"/>`); }
+    if (o.jacket){ P.push(`<path d="M54 92 L60 104 L66 92 Z" fill="#1F2330"/><line x1="60" y1="104" x2="60" y2="147" stroke="rgba(0,0,0,.3)" stroke-width="1.4"/>`); }
+    if (o.stripes){ for (let y=100;y<146;y+=9) P.push(`<rect x="${40-(y-92)*0.07}" y="${y}" width="${40+(y-92)*0.14}" height="4" fill="#2A78D6" opacity=".8"/>`); }
+    if (o.chef){ P.push(`<path d="M50 92 L60 102 L70 92 L66 104 L54 104 Z" fill="#D23F3F"/>${[52,68].flatMap(x=>[114,126,138].map(y=>`<circle cx="${x}" cy="${y}" r="1.6" fill="#5B6576"/>`)).join('')}`); }
+    if (o.prop==='steth'){ P.push(`<path d="M50 94 Q48 118 58 122 Q68 118 70 94" fill="none" stroke="#5B6576" stroke-width="2"/><circle cx="58" cy="124" r="3.2" fill="#8A93A3"/>`); }
+    // cuello y cabeza
+    P.push(`<rect x="52" y="84" width="16" height="10" fill="${SKIN_DARK}"/>`);
+    P.push(`<rect x="50" y="36" width="20" height="9" rx="2" fill="${SKIN}" stroke="${SKIN_DARK}" stroke-width="1.2"/>`);
+    P.push(`<rect x="39" y="43" width="42" height="44" rx="9" fill="${SKIN}" stroke="${SKIN_DARK}" stroke-width="1.2"/>`);
+    // cara
+    P.push(`<circle cx="52" cy="64" r="2.8" fill="${FACE}"/><circle cx="68" cy="64" r="2.8" fill="${FACE}"/>`);
+    if (gender==='F') P.push(`<path d="M48.5 60 L50.5 61.5 M71.5 60 L69.5 61.5" stroke="${FACE}" stroke-width="1.4"/><path d="M53 74 Q60 79 67 74" fill="none" stroke="#C0392B" stroke-width="2.4" stroke-linecap="round"/>`);
+    else P.push(`<path d="M52 73 Q60 79 68 73" fill="none" stroke="${FACE}" stroke-width="2.2" stroke-linecap="round"/>`);
+    // pelo (encima de la cabeza)
+    if (gender==='F') P.push(`<path d="M37 60 Q36 36 60 35 Q84 36 83 60 Q76 48 60 47 Q48 47 42 53 Z" fill="#8B4A22"/>`);
+    if (gender==='M') P.push(`<path d="M38 58 Q38 36 60 35 Q82 36 82 58 L79 52 Q70 46 60 46 Q49 46 41 52 Z" fill="#4A2C1A"/>`);
+    // sombreros / accesorios de cabeza
+    const hats = {
+      hardhat:      `<path d="M36 50 Q36 28 60 27 Q84 28 84 50 Z" fill="#F5C400" stroke="#C99D00"/><rect x="32" y="48" width="56" height="6" rx="3" fill="#F5C400" stroke="#C99D00"/>`,
+      hardhatWhite: `<path d="M36 50 Q36 28 60 27 Q84 28 84 50 Z" fill="#FFFFFF" stroke="#AEB7C4"/><rect x="32" y="48" width="56" height="6" rx="3" fill="#FFFFFF" stroke="#AEB7C4"/>`,
+      chef:         `<rect x="42" y="30" width="36" height="16" fill="#FFFFFF" stroke="#C9D2DE"/><circle cx="48" cy="24" r="10" fill="#FFFFFF" stroke="#C9D2DE"/><circle cx="60" cy="19" r="12" fill="#FFFFFF" stroke="#C9D2DE"/><circle cx="72" cy="24" r="10" fill="#FFFFFF" stroke="#C9D2DE"/><rect x="43" y="28" width="34" height="10" fill="#FFFFFF"/>`,
+      beret:        `<ellipse cx="58" cy="42" rx="26" ry="9" fill="#C0392B"/><circle cx="60" cy="33" r="2.5" fill="#C0392B"/>`,
+      cap:          `<path d="M38 48 Q38 30 60 29 Q82 30 82 48 Z" fill="#1F3B73"/><rect x="36" y="45" width="48" height="6" rx="2" fill="#15294F"/><circle cx="60" cy="38" r="3.5" fill="#EDA100"/>`,
+      straw:        `<ellipse cx="60" cy="45" rx="34" ry="7" fill="#E4C06A" stroke="#B8923C"/><path d="M42 45 Q42 26 60 25 Q78 26 78 45 Z" fill="#E4C06A" stroke="#B8923C"/><rect x="42" y="38" width="36" height="4" fill="#8B5A2B"/>`,
+      goggles:      `<rect x="40" y="46" width="40" height="10" rx="5" fill="#7FC4E8" opacity=".85" stroke="#2F6DB5"/><rect x="38" y="49" width="44" height="3" fill="#2F6DB5" opacity=".5"/>`,
+      headset:      `<path d="M37 64 Q37 30 60 30 Q83 30 83 64" fill="none" stroke="#2B3A55" stroke-width="4"/><rect x="33" y="58" width="8" height="14" rx="3" fill="#2B3A55"/><rect x="79" y="58" width="8" height="14" rx="3" fill="#2B3A55"/><path d="M37 70 Q40 80 50 79" fill="none" stroke="#2B3A55" stroke-width="2"/>`,
+    };
+    if (o.hat && hats[o.hat]) P.push(hats[o.hat]);
+    // objeto en la mano derecha
+    const props = {
+      flask:     `<path d="M96 118 L102 118 L102 126 L108 140 Q109 144 104 144 L94 144 Q89 144 90 140 L96 126 Z" fill="#BFE3F5" stroke="#2F6DB5"/><path d="M92 136 L106 136 L108 140 Q109 144 104 144 L94 144 Q89 144 90 140 Z" fill="#3FA37A"/>`,
+      plan:      `<rect x="92" y="118" width="10" height="30" rx="4" fill="#9CC3E8" stroke="#2F6DB5"/>`,
+      wrench:    `<rect x="95" y="116" width="5" height="24" rx="2" fill="#8A93A3"/><circle cx="97.5" cy="115" r="5" fill="none" stroke="#8A93A3" stroke-width="3"/>`,
+      laptop:    `<rect x="88" y="124" width="24" height="16" rx="2" fill="#2B3A55"/><rect x="90" y="126" width="20" height="12" fill="#7FC4E8"/>`,
+      briefcase: `<rect x="86" y="140" width="22" height="16" rx="2" fill="#8B5A2B"/><rect x="93" y="136" width="8" height="5" rx="1" fill="none" stroke="#8B5A2B" stroke-width="2"/>`,
+      chart:     `<rect x="88" y="120" width="20" height="16" rx="1" fill="#FFFFFF" stroke="#8A93A3"/><path d="M91 132 L96 127 L100 130 L105 123" fill="none" stroke="#177A3D" stroke-width="2"/>`,
+      book:      `<rect x="88" y="126" width="18" height="22" rx="1" fill="#177A3D"/><rect x="90" y="128" width="3" height="18" fill="rgba(255,255,255,.4)"/>`,
+      notebook:  `<rect x="89" y="124" width="16" height="20" rx="1" fill="#FFFFFF" stroke="#8A93A3"/><line x1="92" y1="130" x2="102" y2="130" stroke="#AEB7C4"/><line x1="92" y1="135" x2="102" y2="135" stroke="#AEB7C4"/>`,
+      mic:       `<rect x="94" y="126" width="6" height="16" rx="2" fill="#2B3A55"/><circle cx="97" cy="123" r="6" fill="#5B6576"/>`,
+      palette:   `<ellipse cx="100" cy="132" rx="12" ry="9" fill="#E4C06A" stroke="#B8923C"/><circle cx="95" cy="129" r="2.2" fill="#D23F3F"/><circle cx="101" cy="127" r="2.2" fill="#2A78D6"/><circle cx="106" cy="131" r="2.2" fill="#177A3D"/>`,
+      spoon:     `<rect x="95" y="118" width="4" height="26" rx="2" fill="#8B5A2B"/><ellipse cx="97" cy="116" rx="5" ry="7" fill="#8B5A2B"/>`,
+      suitcase:  `<rect x="86" y="138" width="20" height="20" rx="3" fill="#2A78D6"/><rect x="93" y="133" width="6" height="6" rx="1" fill="none" stroke="#1D5FBF" stroke-width="2"/>`,
+      shield:    `<path d="M97 120 L108 124 L107 136 Q104 144 97 147 Q90 144 87 136 L86 124 Z" fill="#C9A227" stroke="#8A6D12"/><path d="M97 127 L99 132 L104 132 L100 135 L102 140 L97 137 L92 140 L94 135 L90 132 L95 132 Z" fill="#FFF4C2"/>`,
+      sprout:    `<rect x="92" y="136" width="12" height="10" rx="2" fill="#8B5A2B"/><path d="M98 136 Q98 126 92 122 M98 132 Q100 124 106 122" fill="none" stroke="#3FA37A" stroke-width="3" stroke-linecap="round"/>`,
+    };
+    if (o.prop && props[o.prop]) P.push(props[o.prop]);
+    return `<svg viewBox="0 0 120 200" role="img" aria-label="Figura: ${o.label}">${P.join('')}</svg>`;
+  }
+
+
+  window.FIGURAS = { outfitFor, figureSVG };
+})();
+
+</script>
+<script>
+/* Motor del modelo en el navegador.
+   Aplica las MISMAS fórmulas del Módulo 5 (posterior gaussiano exacto) y del Módulo 7 (afinidad + Monte Carlo)
+   con los parámetros que el Colab ya aprendió (cohorte.json → modelo). No entrena nada: solo recalcula
+   a un estudiante cuando se registra una nueva aplicación del CHASIDE. */
+(() => {
+  'use strict';
+  const CODIGOS = ['C', 'H', 'A', 'S', 'I', 'D', 'E'];
+
+  // Φ con precisión ~1e-7 (Abramowitz–Stegun 7.1.26 sobre erf)
+  function phi(z) {
+    const t = 1 / (1 + 0.3275911 * Math.abs(z) / Math.SQRT2);
+    const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z / 2);
+    return 0.5 * (1 + (z >= 0 ? y : -y));
+  }
+
+  // P(X > h, Y > k) para normal bivariada estándar con correlación r (algoritmo de Genz, bvnu)
+  function bvnu(h, k, r) {
+    const tp = 2 * Math.PI;
+    let w, x;
+    if (Math.abs(r) < 0.3) { w = [0.1713244923791705, 0.3607615730481384, 0.4679139345726904]; x = [0.9324695142031522, 0.6612093864662647, 0.2386191860831970]; }
+    else if (Math.abs(r) < 0.75) { w = [0.04717533638651177, 0.1069393259953183, 0.1600783285433464, 0.2031674267230659, 0.2334925365383547, 0.2491470458134029]; x = [0.9815606342467191, 0.9041172563704750, 0.7699026741943050, 0.5873179542866171, 0.3678314989981802, 0.1252334085114692]; }
+    else { w = [0.01761400713915212, 0.04060142980038694, 0.06267204833410906, 0.08327674157670475, 0.1019301198172404, 0.1181945319615184, 0.1316886384491766, 0.1420961093183821, 0.1491729864726037, 0.1527533871307259]; x = [0.9931285991850949, 0.9639719272779138, 0.9122344282513259, 0.8391169718222188, 0.7463319064601508, 0.6360536807265150, 0.5108670019508271, 0.3737060887154196, 0.2277858511416451, 0.07652652113349733]; }
+    let hk = h * k, bvn = 0;
+    if (Math.abs(r) < 0.925) {
+      const hs = (h * h + k * k) / 2, asr = Math.asin(r) / 2;
+      for (let i = 0; i < w.length; i++) {
+        let sn = Math.sin(asr * (1 - x[i])); bvn += w[i] * Math.exp((sn * hk - hs) / (1 - sn * sn));
+        sn = Math.sin(asr * (1 + x[i])); bvn += w[i] * Math.exp((sn * hk - hs) / (1 - sn * sn));
+      }
+      bvn = bvn * asr / tp + phi(-h) * phi(-k);
+    } else {
+      if (r < 0) { k = -k; hk = -hk; }
+      if (Math.abs(r) < 1) {
+        const as = (1 - r) * (1 + r); let a = Math.sqrt(as);
+        const bs = (h - k) ** 2, c = (4 - hk) / 8, d = (12 - hk) / 16;
+        bvn = a * Math.exp(-(bs / as + hk) / 2) * (1 - c * (bs - as) * (1 - d * bs / 5) / 3 + c * d * as * as / 5);
+        if (hk > -160) { const b = Math.sqrt(bs); bvn -= Math.exp(-hk / 2) * Math.sqrt(tp) * phi(-b / a) * b * (1 - c * bs * (1 - d * bs / 5) / 3); }
+        a /= 2;
+        for (let i = 0; i < w.length; i++) {
+          for (const sg of [-1, 1]) {
+            const xs = (a * (sg * x[i] + 1)) ** 2, rs = Math.sqrt(1 - xs), asr = -(bs / xs + hk) / 2;
+            if (asr > -100) bvn += a * w[i] * Math.exp(asr) * (Math.exp(-hk * xs / (2 * (1 + rs) ** 2)) / rs - (1 + c * xs * (1 + d * xs)));
+          }
+        }
+        bvn = -bvn / tp;
+      }
+      if (r > 0) bvn += phi(-Math.max(h, k));
+      else if (h >= k) bvn = -bvn;
+      else bvn = (h < 0 ? phi(k) - phi(h) : phi(-h) - phi(-k)) - bvn;
+    }
+    return Math.max(0, Math.min(1, bvn));
+  }
+
+  /* ── Módulo 4: respuestas → evidencia por área ── */
+  function evidenciaChaside(M, respuestas, meta) {
+    // respuestas: {numero_item: 1 | 0 | null}
+    const porArea = {};
+    CODIGOS.forEach(a => { porArea[a] = { interes: [0, 0], aptitud: [0, 0] }; });
+    let resp = 0, si = 0;
+    M.claves.forEach(([item, a, t]) => {
+      const v = respuestas[item];
+      if (v === 0 || v === 1) { porArea[a][t][1]++; porArea[a][t][0] += v; resp++; si += v; }
+    });
+    const punt = {}, z = {};
+    CODIGOS.forEach(a => {
+      punt[a] = {};
+      ['interes', 'aptitud'].forEach(t => {
+        const [s, n] = porArea[a][t], [m, sd] = M.normas_chaside[a][t];
+        punt[a][t] = n ? s / n : null;
+        z[a] = z[a] || {};
+        z[a][t] = n ? (s / n - m) / sd : null;
+      });
+    });
+    const total = M.claves.length, comp = resp / total;
+    const ints = CODIGOS.map(a => punt[a].interes).filter(v => v != null);
+    const media = ints.reduce((x, y) => x + y, 0) / (ints.length || 1);
+    const disp = Math.sqrt(ints.reduce((x, y) => x + (y - media) ** 2, 0) / Math.max(1, ints.length - 1));
+    const propSi = resp ? si / resp : 0;
+    const crit = {
+      antiguedad: 'menos_1_anio',
+      modalidad: meta.modalidad || 'supervisada',
+      completitud: comp >= 0.95 ? 'completa' : comp >= 0.8 ? 'parcial' : 'incompleta',
+      consistencia: (disp < M.consistencia.disp_p05 && propSi >= M.consistencia.rango_si[0] && propSi <= M.consistencia.rango_si[1]) ? 'alerta' : 'sin_alertas',
+      completitud_pct: Math.round(comp * 100)
+    };
+    const conteos = {};
+    CODIGOS.forEach(a => { conteos[a] = { interes: porArea[a].interes.slice(), aptitud: porArea[a].aptitud.slice() }; });
+    return { z, crit, origen: { respondidas: resp, total, si, areas: conteos } };
+  }
+
+  /* ── Módulo 5: posterior gaussiano exacto por área ── */
+  function s2Fuente(M, alfa, crit) {
+    let f = 1;
+    ['antiguedad', 'modalidad', 'completitud', 'consistencia'].forEach(c => { if (crit[c]) f *= M.rubrica[c][crit[c]]; });
+    return (1 - alfa) / alfa * f;   // validación publicada y equivalencia directa: factor 1
+  }
+  function posteriorArea(M, a, ev, crit) {
+    const p = M.param[a], rho = p.rho;
+    const det = 1 - rho * rho;
+    let L = [[1 / det, -rho / det], [-rho / det, 1 / det]], b = [0, 0];
+    const obs = [];
+    if (ev.z_int != null) {
+      const al = M.alfa_chaside[a].interes;
+      obs.push(['chaside_interes', [1, 0], ev.z_int / Math.sqrt(al), s2Fuente(M, al, crit)]);
+    }
+    if (ev.z_notas != null) {
+      const an = p.alfa_notas, fw = ev.W_efectiva != null ? Math.min(3, Math.max(0.5, p.W_med / ev.W_efectiva)) : 1;
+      obs.push(['notas', [0, 1], ev.z_notas / Math.sqrt(an), (1 - an) / an * fw]);
+    }
+    if (ev.z_apt != null) {
+      const lam = p.lam_apt;
+      obs.push(['autopercepcion', [0, 1], ev.z_apt / lam, s2Fuente(M, lam * lam, crit)]);
+    }
+    obs.forEach(([, H, y, s2]) => {
+      L = [[L[0][0] + H[0] * H[0] / s2, L[0][1] + H[0] * H[1] / s2], [L[1][0] + H[1] * H[0] / s2, L[1][1] + H[1] * H[1] / s2]];
+      b = [b[0] + H[0] * y / s2, b[1] + H[1] * y / s2];
+    });
+    const d = L[0][0] * L[1][1] - L[0][1] * L[1][0];
+    const S = [[L[1][1] / d, -L[0][1] / d], [-L[1][0] / d, L[0][0] / d]];
+    const mu = [S[0][0] * b[0] + S[0][1] * b[1], S[1][0] * b[0] + S[1][1] * b[1]];
+    const aportes = {};
+    obs.forEach(([n, H, y, s2]) => { const v = [H[0] * y / s2, H[1] * y / s2]; aportes[n] = [S[0][0] * v[0] + S[0][1] * v[1], S[1][0] * v[0] + S[1][1] * v[1]]; });
+    return { mu, S, aportes };
+  }
+  function zona(M, mu, S) {
+    const sI = Math.sqrt(S[0][0]), sR = Math.sqrt(S[1][1]);
+    const pI = phi(mu[0] / sI), pR = phi(mu[1] / sR);
+    const pAA = bvnu(-mu[0] / sI, -mu[1] / sR, S[0][1] / (sI * sR));
+    const probs = { vocacion_consolidada: pAA, interes_a_fortalecer: pI - pAA, talento_no_explorado: pR - pAA, no_prioritaria: 1 - pI - pR + pAA };
+    const mejor = Object.keys(probs).reduce((x, y) => probs[y] > probs[x] ? y : x);
+    return { clave: probs[mejor] >= M.umbral_certeza ? mejor : 'indeterminado', certeza: probs[mejor], probabilidades: probs };
+  }
+  const TXT_ZONA = { vocacion_consolidada: 'Vocación consolidada', interes_a_fortalecer: 'Interés a fortalecer', talento_no_explorado: 'Talento no explorado', no_prioritaria: 'Área no prioritaria', indeterminado: 'Indeterminado: falta evidencia' };
+  const eje = (mu, sd) => ({ percentil: Math.round(phi(mu) * 100), rango90: [Math.round(phi(mu - 1.645 * sd) * 100), Math.round(phi(mu + 1.645 * sd) * 100)], z: mu, sd });
+
+  /* ── Módulo 7: afinidad equilibrada + Monte Carlo ── */
+  function afinidadCruda(C, gamma, s) {
+    return C.map(c => {
+      const w = CODIGOS.map(k => Math.pow((c.perfil[k] - 1) / 4, gamma)), sw = w.reduce((x, y) => x + y, 0) || 1;
+      return 100 * CODIGOS.reduce((acc, k, i) => acc + w[i] / sw * s[i], 0);
+    });
+  }
+  function afinidad(C, gamma, normas, beta, MU) {
+    const s = MU.map(([i, r]) => beta * phi(i) + (1 - beta) * phi(r));
+    const x = afinidadCruda(C, gamma, s), n = normas[beta.toFixed(1)];
+    return x.map((v, j) => n ? 100 * phi((v - n.media[j]) / n.sd[j]) : v);
+  }
+  function rng(semilla) {   // mulberry32 + Box–Muller
+    let a = semilla >>> 0;
+    const u = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    return () => Math.sqrt(-2 * Math.log(u() + 1e-12)) * Math.cos(2 * Math.PI * u());
+  }
+  function monteCarlo(C, gamma, normas, beta, MU, SIG, n, k) {
+    const g = rng(20261004), cuenta = new Array(C.length).fill(0), muestras = C.map(() => []);
+    const Ls = SIG.map(S => { const l00 = Math.sqrt(S[0][0]), l10 = S[1][0] / l00; return [l00, l10, Math.sqrt(Math.max(1e-12, S[1][1] - l10 * l10))]; });
+    for (let t = 0; t < n; t++) {
+      const draw = MU.map(([m0, m1], a) => { const e0 = g(), e1 = g(), L = Ls[a]; return [m0 + L[0] * e0, m1 + L[1] * e0 + L[2] * e1]; });
+      const A = afinidad(C, gamma, normas, beta, draw);
+      const top = A.map((v, j) => [v, j]).sort((x, y) => y[0] - x[0]).slice(0, k);
+      top.forEach(([, j]) => cuenta[j]++);
+      A.forEach((v, j) => muestras[j].push(v));
+    }
+    const q = (arr, p) => { const s = arr.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
+    return { p: cuenta.map(c => c / n), lo: muestras.map(m => q(m, 0.05)), hi: muestras.map(m => q(m, 0.95)) };
+  }
+
+  /* ── Recalcular un estudiante completo con un CHASIDE nuevo ── */
+  function recalcular(M, carrerasCat, est, respuestas, meta) {
+    const E = evidenciaChaside(M, respuestas, meta);
+    const N = JSON.parse(JSON.stringify(est));
+    const crit = E.crit;
+    N.areas.forEach(ar => {
+      const a = ar.codigo, ev0 = ar.evidencia || {};
+      const ev = { z_int: E.z[a].interes, z_apt: E.z[a].aptitud, z_notas: ev0.z_notas, W_efectiva: ev0.W_efectiva };
+      const { mu, S, aportes } = posteriorArea(M, a, ev, crit);
+      const zn = zona(M, mu, S);
+      ar.interes = eje(mu[0], Math.sqrt(S[0][0])); ar.rendimiento = eje(mu[1], Math.sqrt(S[1][1]));
+      ar.zona = { clave: zn.clave, texto: TXT_ZONA[zn.clave], certeza: zn.certeza, probabilidades: zn.probabilidades };
+      ar.aportes = { interes: { chaside_interes: aportes.chaside_interes ? aportes.chaside_interes[0] : null },
+                     rendimiento: { notas: aportes.notas ? aportes.notas[1] : null, autopercepcion: aportes.autopercepcion ? aportes.autopercepcion[1] : null } };
+      if (ev.z_apt != null && ev.z_notas != null) {
+        const r = M.param[a].r_apt_notas, br = (ev.z_apt - r * ev.z_notas) / Math.sqrt(1 - r * r);
+        const k = br > 1 ? 'por_encima' : br < -1 ? 'por_debajo' : 'coherente';
+        ar.autopercepcion = { clave: k, texto: { por_encima: 'se percibe por ENCIMA de sus notas', por_debajo: 'se percibe por DEBAJO de sus notas', coherente: 'coherente con sus notas' }[k] };
+      }
+      ar.evidencia = ev; ar._S = S;
+    });
+    // Carreras
+    const MU = N.areas.map(a => [a.interes.z, a.rendimiento.z]), SIG = N.areas.map(a => a._S);
+    const C = carrerasCat.lista, A = afinidad(C, carrerasCat.gamma, carrerasCat.normas, M.beta, MU);
+    const mc = monteCarlo(C, carrerasCat.gamma, carrerasCat.normas, M.beta, MU, SIG, M.n_sim, M.top_k);
+    const orden = A.map((v, j) => [v, j]).sort((x, y) => y[0] - x[0]).slice(0, 10);
+    N.carreras = orden.map(([v, j]) => ({ id: C[j].id, nombre: C[j].nombre, afinidad: Math.round(v * 10) / 10, rango90: [Math.round(mc.lo[j] * 10) / 10, Math.round(mc.hi[j] * 10) / 10],
+      p_top5: Math.round(mc.p[j] * 100) / 100, universidad: C[j].universidad, ciudad: C[j].ciudad, razon: razon(N, C[j], carrerasCat.gamma, M.beta) }));
+    N.areas.forEach(a => { delete a._S; });
+    // Fuentes, origen y alertas
+    N.estudiante.fuentes.chaside = { fecha: meta.fecha, modalidad: crit.modalidad, completitud: crit.completitud, consistencia: crit.consistencia };
+    N.origen = { ...(N.origen || {}), chaside: E.origen };
+    const al = (N.alertas || []).filter(x => !['consistencia', 'completitud', 'antiguedad', 'modalidad', 'indeterminado'].includes(x.tipo));
+    if (crit.consistencia === 'alerta') al.unshift({ tipo: 'consistencia', texto: 'CHASIDE con respuestas poco diferenciadas: confirmar intereses en entrevista.' });
+    if (crit.completitud !== 'completa') al.unshift({ tipo: 'completitud', texto: `CHASIDE ${crit.completitud} (${crit.completitud_pct} % respondido).` });
+    if (crit.modalidad === 'autonoma') al.push({ tipo: 'modalidad', texto: 'CHASIDE respondido sin supervisión: su confiabilidad se ajustó a la baja.' });
+    const nInd = N.areas.filter(a => a.zona.clave === 'indeterminado').length;
+    if (nInd >= 3) al.push({ tipo: 'indeterminado', texto: `${nInd} de 7 áreas sin zona clara: falta evidencia (sumar entrevista u otra prueba).` });
+    N.alertas = al;
+    return N;
+  }
+  function razon(N, c, gamma, beta) {
+    const ap = N.areas.map(a => ({ a, v: Math.pow((c.perfil[a.codigo] - 1) / 4, gamma) * (beta * phi(a.interes.z) + (1 - beta) * phi(a.rendimiento.z)) })).sort((x, y) => y.v - x.v);
+    const a = ap[0].a, pI = a.interes.percentil, pR = a.rendimiento.percentil;
+    let t = `${a.nombre} (pesa ${c.perfil[a.codigo]}/5 en la carrera): interés P${pI}, rendimiento P${pR}`;
+    const mats = (a.materias_clave || []).filter(m => m.nota != null).map(m => `${m.materia} ${m.nota.toFixed(1)}`);
+    if (mats.length) t += ' · materias: ' + mats.join(', ');
+    if (pI >= 60 && pR < 40) t += ' · interés alto, conviene reforzar el rendimiento';
+    else if (pR >= 60 && pI < 40) t += ' · rinde bien aunque declara poco interés';
+    if (ap[1].v >= 0.5 * ap[0].v) t += ` · también suma ${ap[1].a.nombre}`;
+    return t;
+  }
+
+  window.MOTOR = { phi, bvnu, evidenciaChaside, posteriorArea, zona, recalcular, afinidad };
+})();
+
+</script>
+<script>
+/* Encuesta de validación vocacional
+   Captura: perfil mínimo · notas de 3.º (y opcional 2.º) de Bachillerato · test de intereses propio (98 preguntas, 7 áreas) · resultado real (carrera y satisfacción).
+   Calcula el resultado con el mismo modelo (motor.js) para una persona sola, contra normas fijas de referencia.
+   Envía la respuesta a ENDPOINT (Google Apps Script → Google Sheet). Sin ENDPOINT funciona en modo vista previa. */
+(() => {
+  'use strict';
+  const ENDPOINT = window.ENCUESTA_ENDPOINT || '';           // URL /exec del Apps Script
+  const VERSION = 'encuesta-1.0';
+  const { modelo: M, carreras: CAT } = window.DATOS_MODELO;
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const AREAS = { C: 'Administrativas y Contables', H: 'Humanísticas y Ciencias Sociales', A: 'Artísticas', S: 'Ciencias de la Salud', I: 'Ingenierías, Técnicas y Computación', D: 'Defensa y Seguridad', E: 'Ciencias Exactas y Agrarias' };
+  const CORTO = { C: 'Administración', H: 'Humanidades', A: 'Artes', S: 'Salud', I: 'Ingeniería', D: 'Defensa', E: 'Ciencias' };
+  const CODIGOS = Object.keys(AREAS);
+
+  /* Materias del Bachillerato General Unificado y su aporte a cada área (mismos pesos 0–3 que el mapeo del modelo) */
+  const MATERIAS = [
+    ['Matemática', { C: 1, I: 2, E: 3 }],
+    ['Física', { I: 3, E: 3 }],
+    ['Química', { S: 2, I: 1, E: 3 }],
+    ['Biología', { S: 3, E: 2 }],
+    ['Lengua y Literatura', { C: 1, H: 3, A: 1 }],
+    ['Inglés', { C: 1, H: 3, A: 1 }],
+    ['Historia', { C: 1, H: 3, D: 1 }],
+    ['Filosofía', { H: 3 }],
+    ['Educación para la Ciudadanía', { C: 1, H: 3, D: 1 }],
+    ['Emprendimiento y Gestión', { C: 3, H: 1, E: 1 }],
+    ['Educación Cultural y Artística', { A: 3 }],
+    ['Informática (si la tuviste)', { I: 3, E: 1 }]
+  ];
+  // Reglas para clasificar materias que el estudiante agrega (las mismas del modelo + algunas de especializaciones)
+  const REGLAS = [
+    ['religi|valores|catequesis', 0, {}],
+    ['electr|mec[aá]nic|automotr|industrial|mecatr|metalmec|refriger', 1, { I: 3, E: 1 }],
+    ['filosof', 1, { H: 3 }],
+    ['dibujo t[eé]cnico', 1, { A: 1, I: 2 }],
+    ['turism|hoteler|gastronom|cocina', 1, { C: 2, A: 1, H: 1 }],
+    ['agropecu|agr[ií]col|zootec', 1, { S: 1, E: 3 }],
+    ...(window.DATOS_MODELO.mapeo || [])
+  ];
+  const sinTilde = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  function clasificar(nombre) {
+    const a = String(nombre).toLowerCase().trim(), b = sinTilde(nombre);
+    if (!a) return null;
+    for (const [pat, incluir, pesos] of REGLAS) { const re = new RegExp(pat); if (re.test(a) || re.test(b)) return { incluir: !!incluir, pesos }; }
+    return null;
+  }
+  const MAX_EXTRA = 6;
+
+  // Normas de referencia PROVISIONALES para notas de 0 a 10 del bachillerato ecuatoriano.
+  // Se recalculan con las respuestas reales cuando haya suficientes (≥ 100).
+  const NORMA_NOTA = { media: 8.5, sd: 0.9 };
+  // Dispersión del rendimiento por área en la cohorte de referencia (para llevar el promedio a escala z del modelo)
+  const SD_AREA = { C: 0.808, H: 0.82, A: 0.791, S: 0.83, I: 0.897, D: 0.913, E: 0.869 };
+  const GAMMA_ANIO = 0.8;  // el año anterior pesa 0.8, igual que en el modelo
+
+  const NOMBRES = ['Camila', 'Valentina', 'Sofía', 'Daniela', 'Mariana', 'Gabriela', 'Emilia', 'Paula', 'Andrea', 'Renata', 'Mateo', 'Santiago', 'Sebastián', 'Nicolás', 'Martín', 'Daniel', 'Joaquín', 'Diego', 'Gabriel', 'Emilio', 'Andrés', 'Tomás', 'Felipe', 'Esteban', 'Leonardo'];
+  const APELLIDOS = ['Andrade', 'Salazar', 'Cevallos', 'Paredes', 'Guerrero', 'Zambrano', 'Mora', 'Espinosa', 'Benítez', 'Jaramillo', 'Proaño', 'Ortiz', 'Chávez', 'Molina', 'Rivas', 'Torres', 'Naranjo', 'Pazmiño', 'Cordero', 'Aguirre', 'Herrera', 'León', 'Ponce', 'Rosero', 'Tapia', 'Valencia', 'Yépez', 'Freire', 'Hidalgo', 'Dávila'];
+  const MOTIVOS = ['Me gusta, es mi vocación', 'Fue el cupo que me asignaron', 'Por mi familia', 'Por razones económicas o laborales', 'Por cercanía u horario', 'Otro motivo'];
+  const COLEGIOS = ['Fiscal', 'Particular', 'Fiscomisional', 'Municipal'];
+  const SEMESTRES = ['1.º semestre', '2.º semestre', '3.º semestre o más'];
+  const ATENCION = [{ pos: 35, texto: 'Para verificar que estás leyendo, en esta pregunta marca "No".', esperado: 0 },
+                    { pos: 70, texto: 'Para verificar que estás leyendo, en esta pregunta marca "Sí".', esperado: 1 }];
+
+  /* Estado */
+  const rnd = () => (crypto.getRandomValues(new Uint32Array(1))[0]);
+  const codigo = 'R-' + rnd().toString(36).slice(0, 6).toUpperCase();
+  const nombre = `${NOMBRES[rnd() % NOMBRES.length]} ${APELLIDOS[rnd() % APELLIDOS.length]}`;
+  const S = { paso: 0, t0: Date.now(), tChasideIni: null, tChasideFin: null, perfil: {}, notas3: {}, notas2: {}, con2: false, extra: [], quitadas: [], resp: {}, aten: {}, pagina: 0, final: {}, enviado: null, resultado: null };
+
+  // Lista de ítems del test con las 2 de atención intercaladas
+  const ITEMS = M.claves.map(([n]) => n).sort((a, b) => a - b).map(n => ({ n, texto: M.preguntas?.[n] || `Pregunta ${n}` }));
+  ATENCION.slice().reverse().forEach((a, i) => ITEMS.splice(a.pos, 0, { aten: ATENCION.length - 1 - i, texto: a.texto }));
+  const POR_PAG = 10, PAGINAS = Math.ceil(ITEMS.length / POR_PAG);
+
+  const PASOS = ['Inicio', 'Tu perfil', 'Tus notas', 'Test de intereses', 'Tu carrera hoy', 'Tu resultado'];
+  const opcionesCarrera = sel => {
+    const porArea = {};
+    CAT.lista.forEach(c => { const a = CODIGOS.reduce((x, y) => c.perfil[y] > c.perfil[x] ? y : x, 'C'); (porArea[a] = porArea[a] || []).push(c); });
+    return `<option value="">Elige…</option>${CODIGOS.map(a => `<optgroup label="${esc(AREAS[a])}">${(porArea[a] || []).sort((x, y) => x.nombre.localeCompare(y.nombre, 'es')).map(c => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(c.nombre)}</option>`).join('')}</optgroup>`).join('')}<option value="otra"${sel === 'otra' ? ' selected' : ''}>Otra carrera</option>`;
+  };
+
+  // Avance total: el test es la parte larga, así que pesa la mayor parte de la barra
+  function avance() {
+    if (S.paso >= 5) return 100;
+    const base = [0, 5, 12, 20, 92][S.paso];
+    if (S.paso !== 3) return base;
+    const hechas = Object.keys(S.resp).length + Object.keys(S.aten).length;
+    return Math.round(20 + 72 * hechas / ITEMS.length);
+  }
+  function pintarProgreso() {
+    const a = avance();
+    $('#barra-avance').style.width = a + '%';
+    $('#barra-avance').parentElement.setAttribute('aria-valuenow', a);
+    $('#pct-avance').textContent = a === 100 ? '¡Terminado!' : a + ' %';
+  }
+  function pintarCab() {
+    pintarProgreso();
+    $('#paso-nombre').textContent = `${S.paso + 1} de ${PASOS.length} · ${PASOS[S.paso]}`;
+  }
+  function ir(p) { S.paso = p; pintarCab(); pintar(); window.scrollTo({ top: 0 }); }
+
+  function pintar() {
+    const v = $('#vista');
+    if (S.paso === 0) v.innerHTML = `<div class="tarjeta">
+        <h2>¿Elegiste bien tu carrera?</h2>
+        <p class="lead">Esta encuesta es anónima y forma parte de una investigación de la Maestría en Inteligencia Artificial Aplicada de la UDLA. Queremos comprobar si un sistema de orientación vocacional recomienda carreras que de verdad encajan con las personas.</p>
+        <p class="lead">Toma unos <b>15 minutos</b>. Al final verás tu propio resultado: tus áreas fuertes y las carreras más afines a tu perfil.</p>
+        <div class="aviso">Ten a mano, si puedes, tus notas de 3.º de Bachillerato. Si no las recuerdas exactas, pon tu mejor aproximación.</div>
+        <div class="pie"><span class="sutil">Tu código anónimo: <b class="mono">${codigo}</b></span><button class="boton" id="sig">Empezar</button></div></div>`;
+    if (S.paso === 1) v.innerHTML = `<div class="tarjeta"><h2>Tu perfil</h2>
+        <div class="campo"><label for="colegio">¿En qué tipo de colegio te graduaste?</label><select id="colegio"><option value="">Elige…</option>${COLEGIOS.map(c => `<option${c === S.perfil.colegio ? ' selected' : ''}>${c}</option>`).join('')}</select></div>
+        <div class="campo"><label for="carrera">¿Qué carrera estudias?</label><select id="carrera">${opcionesCarrera(S.perfil.carrera)}</select></div>
+        <div class="campo" id="campo-otra" ${S.perfil.carrera === 'otra' ? '' : 'hidden'}><label for="otra">¿Cuál?</label><input type="text" id="otra" value="${esc(S.perfil.otra || '')}" maxlength="80"></div>
+        <div class="campo"><label for="semestre">¿En qué semestre estás?</label><select id="semestre"><option value="">Elige…</option>${SEMESTRES.map(c => `<option${c === S.perfil.semestre ? ' selected' : ''}>${c}</option>`).join('')}</select></div>
+        <p class="error" id="err"></p>
+        <div class="pie"><button class="boton sec" id="ant">Atrás</button><button class="boton" id="sig">Continuar</button></div></div>`;
+    if (S.paso === 2) v.innerHTML = `<div class="tarjeta"><h2>Tus notas del colegio</h2>
+        <p class="lead">Escribe tu nota final (sobre 10) de cada materia de <b>3.º de Bachillerato</b>.</p>
+        <div class="aviso">Si no tuviste una materia (por ejemplo, Física en un bachillerato de Sociales), <b>quítala con ×</b> o déjala vacía: no baja tu resultado, solo deja que el test pese más en esa área. Si tuviste materias que no están en la lista, agrégalas abajo.</div>
+        <label class="check"><input type="checkbox" id="con2" ${S.con2 ? 'checked' : ''}> También quiero poner mis notas de 2.º de Bachillerato (opcional)</label>
+        <div style="overflow-x:auto"><table class="notas"><thead><tr><th>Materia</th><th>3.º Bach.</th><th class="col2" ${S.con2 ? '' : 'hidden'}>2.º Bach.</th><th><span class="sr">Quitar</span></th></tr></thead><tbody>
+        ${MATERIAS.map(([m], i) => S.quitadas.includes(i) ? '' : `<tr><td>${esc(m)}</td><td><input type="number" inputmode="decimal" min="0" max="10" step="0.01" data-a="3" data-i="${i}" value="${S.notas3[i] ?? ''}" aria-label="${esc(m)} 3.º"></td>
+          <td class="col2" ${S.con2 ? '' : 'hidden'}><input type="number" inputmode="decimal" min="0" max="10" step="0.01" data-a="2" data-i="${i}" value="${S.notas2[i] ?? ''}" aria-label="${esc(m)} 2.º"></td>
+          <td><button type="button" class="quitar" data-quitar="${i}" aria-label="Quitar ${esc(m)}: no la tuve" title="No la tuve">×</button></td></tr>`).join('')}
+        </tbody></table></div>
+        ${S.quitadas.length ? `<p class="sutil quitadas">Quitaste: ${S.quitadas.map(i => `<button type="button" class="restaurar" data-restaurar="${i}">${esc(MATERIAS[i][0].replace(' (si la tuviste)', ''))} ↺</button>`).join(' ')}</p>` : ''}
+        <div class="extra">
+          <span class="lbl">Otras materias que tuviste (de tu especialización u optativas)</span>
+          <div id="extras">${S.extra.map((x, i) => filaExtra(x, i)).join('')}</div>
+          ${S.extra.length < MAX_EXTRA ? '<button class="boton sec" id="agregar" type="button">+ Agregar materia</button>' : ''}
+        </div>
+        <p class="error" id="err"></p>
+        <div class="pie"><button class="boton sec" id="ant">Atrás</button><button class="boton" id="sig">Continuar</button></div></div>`;
+    if (S.paso === 3) pintarTest(v);
+    if (S.paso === 4) v.innerHTML = `<div class="tarjeta"><h2>Tu carrera hoy</h2>
+        <p class="lead">Ahora sí, piensa en tu presente: la carrera que estudias.</p>
+        <div class="campo"><span class="lbl">¿Qué tan satisfecho(a) estás con tu carrera?</span>
+          <div class="escala" role="radiogroup" data-campo="satisfaccion">${[['1', 'Nada'], ['2', 'Poco'], ['3', 'Regular'], ['4', 'Bastante'], ['5', 'Muy satisfecho']].map(([n, t]) => `<button type="button" role="radio" data-v="${n}" aria-checked="${S.final.satisfaccion === n}"><b>${n}</b><span>${t}</span></button>`).join('')}</div></div>
+        <div class="campo"><span class="lbl">¿Fue tu primera opción?</span><div class="opciones" role="radiogroup" data-campo="primera">${['Sí', 'No'].map(o => `<button type="button" role="radio" data-v="${o}" aria-checked="${S.final.primera === o}">${o}</button>`).join('')}</div></div>
+        <div class="campo"><label for="motivo">¿Por qué la elegiste?</label><select id="motivo"><option value="">Elige el motivo principal…</option>${MOTIVOS.map(o => `<option${o === S.final.motivo ? ' selected' : ''}>${o}</option>`).join('')}</select></div>
+        <div class="campo"><span class="lbl">Si pudieras, ¿te cambiarías de carrera?</span><div class="opciones" role="radiogroup" data-campo="cambiaria">${['Sí', 'No', 'No sé'].map(o => `<button type="button" role="radio" data-v="${o}" aria-checked="${S.final.cambiaria === o}">${o}</button>`).join('')}</div></div>
+        <div class="fila-2">
+          <div class="campo"><label for="otra1">¿Qué otra carrera consideraste? (opcional)</label><select id="otra1">${opcionesCarrera(S.final.otra1).replace('Elige…', 'Ninguna')}</select></div>
+          <div class="campo"><label for="otra2">¿Y otra más? (opcional)</label><select id="otra2">${opcionesCarrera(S.final.otra2).replace('Elige…', 'Ninguna')}</select></div>
+        </div>
+        <p class="error" id="err"></p>
+        <div class="pie"><button class="boton sec" id="ant">Atrás</button><button class="boton" id="sig">Ver mi resultado</button></div></div>`;
+    if (S.paso === 5) pintarResultado(v);
+    enlazar();
+  }
+
+  function textoClasif(x) {
+    const c = clasificar(x.nombre);
+    if (!x.nombre.trim()) return { html: '<span class="sutil">Escribe el nombre de la materia.</span>', manual: false };
+    if (c && !c.incluir) return { html: '<span class="sutil">No académica: no se usa en el cálculo.</span>', manual: false };
+    if (c) return { html: `<span class="sutil">Aporta a: ${Object.keys(c.pesos).map(a => CORTO[a]).join(', ')}</span>`, manual: false };
+    return { html: '', manual: true };
+  }
+  function filaExtra(x, i) {
+    const t = textoClasif(x);
+    return `<div class="fila-extra" data-x="${i}">
+      <input type="text" class="x-nombre" placeholder="Nombre de la materia" value="${esc(x.nombre)}" maxlength="60" aria-label="Nombre de la materia">
+      <input type="number" class="x-n3" inputmode="decimal" min="0" max="10" step="0.01" placeholder="3.º" value="${x.n3 ?? ''}" aria-label="Nota de 3.º">
+      ${S.con2 ? `<input type="number" class="x-n2" inputmode="decimal" min="0" max="10" step="0.01" placeholder="2.º" value="${x.n2 ?? ''}" aria-label="Nota de 2.º">` : ''}
+      <button type="button" class="quitar" aria-label="Quitar materia">×</button>
+      <div class="x-info">${t.html}${t.manual ? `<select class="x-area" aria-label="Área relacionada"><option value="">¿Con qué se relaciona?</option>${CODIGOS.map(a => `<option value="${a}"${x.area === a ? ' selected' : ''}>${esc(AREAS[a])}</option>`).join('')}<option value="ninguna"${x.area === 'ninguna' ? ' selected' : ''}>No sé (no se usará)</option></select>` : ''}</div>
+    </div>`;
+  }
+  function pesosExtra(x) {
+    const c = clasificar(x.nombre);
+    if (c) return c.incluir ? c.pesos : null;
+    return x.area && x.area !== 'ninguna' ? { [x.area]: 3 } : null;
+  }
+
+  function pintarTest(v) {
+    if (!S.tChasideIni) S.tChasideIni = Date.now();
+    const lote = ITEMS.slice(S.pagina * POR_PAG, (S.pagina + 1) * POR_PAG);
+    const resp = it => it.aten != null ? S.aten[it.aten] : S.resp[it.n];
+    v.innerHTML = `<div class="tarjeta">
+      <div class="recuerda aviso"><b>Ubícate en el pasado:</b> responde como eras en el último año del colegio, <b>antes</b> de elegir tu carrera. No pienses en lo que haces hoy en la universidad.</div>
+      <div class="pie"><h2>Test de intereses</h2><span class="sutil">Página ${S.pagina + 1} de ${PAGINAS}</span></div>
+      <ol class="preguntas">${lote.map((it, k) => { const r = resp(it), key = it.aten != null ? 'a' + it.aten : it.n;
+        return `<li tabindex="0" data-k="${key}" class="${r != null ? 'ok' : ''}"><span>${esc(it.texto)}</span>
+          <span class="sn"><button type="button" data-v="1" aria-pressed="${r === 1}">Sí</button><button type="button" data-v="0" aria-pressed="${r === 0}">No</button></span></li>`; }).join('')}</ol>
+      <p class="sutil">Atajo en computadora: teclas S y N.</p>
+      <p class="error" id="err"></p>
+      <div class="pie"><button class="boton sec" id="ant">Atrás</button><button class="boton" id="sig">${S.pagina === PAGINAS - 1 ? 'Terminar el test' : 'Siguiente'}</button></div></div>`;
+  }
+
+  /* ── Cálculo con el modelo (persona individual, normas fijas) ── */
+  function evidenciaNotas() {
+    const porArea = {};
+    CODIGOS.forEach(a => { porArea[a] = { wz3: 0, w3: 0, wz2: 0, w2: 0, mats: [] }; });
+    MATERIAS.forEach(([m, pesos], i) => {
+      [[S.notas3[i], '3'], [S.con2 ? S.notas2[i] : null, '2']].forEach(([n, anio]) => {
+        if (n == null || n === '') return;
+        const z = (n - NORMA_NOTA.media) / NORMA_NOTA.sd;
+        Object.entries(pesos).forEach(([a, w]) => {
+          porArea[a]['wz' + anio] += w * z; porArea[a]['w' + anio] += w;
+          if (anio === '3') porArea[a].mats.push({ materia: m.replace(' (si la tuviste)', ''), nota: +n, peso: w });
+        });
+      });
+    });
+    S.extra.forEach(x => {
+      const pesos = pesosExtra(x); if (!pesos) return;
+      [[x.n3, '3'], [S.con2 ? x.n2 : null, '2']].forEach(([n, anio]) => {
+        if (n == null || n === '' || isNaN(n)) return;
+        const z = (n - NORMA_NOTA.media) / NORMA_NOTA.sd;
+        Object.entries(pesos).forEach(([a, w]) => {
+          porArea[a]['wz' + anio] += w * z; porArea[a]['w' + anio] += w;
+          if (anio === '3') porArea[a].mats.push({ materia: x.nombre.trim(), nota: +n, peso: w });
+        });
+      });
+    });
+    const ev = {};
+    CODIGOS.forEach(a => {
+      const p = porArea[a], R3 = p.w3 ? p.wz3 / p.w3 : null, R2 = p.w2 ? p.wz2 / p.w2 : null;
+      const pes3 = p.w3, pes2 = GAMMA_ANIO * p.w2, W = pes3 + pes2;
+      const R = W ? ((R3 ?? 0) * pes3 + (R2 ?? 0) * pes2) / W : null;
+      ev[a] = { z_notas: R == null ? null : R / SD_AREA[a], W_efectiva: W || null,
+                materias_clave: p.mats.sort((x, y) => y.peso - x.peso || y.nota - x.nota).slice(0, 3) };
+    });
+    return ev;
+  }
+  function calcular() {
+    const ev = evidenciaNotas();
+    const base = {
+      estudiante: { id: codigo, nombre, nombre_ficticio: true, genero: null, grado_actual: null, fuentes: { notas: {}, chaside: {}, ippj: null } },
+      areas: CODIGOS.map(a => ({ codigo: a, nombre: AREAS[a], materias_clave: ev[a].materias_clave, evidencia: { z_notas: ev[a].z_notas, W_efectiva: ev[a].W_efectiva } })),
+      alertas: [], origen: {}, carreras: [], trayectoria: []
+    };
+    const N = window.MOTOR.recalcular(M, CAT, base, S.resp, { fecha: new Date().toISOString().slice(0, 10), modalidad: 'autonoma' });
+    // Posición de su carrera real en el ranking completo
+    const MU = N.areas.map(a => [a.interes.z, a.rendimiento.z]);
+    const A = window.MOTOR.afinidad(CAT.lista, CAT.gamma, CAT.normas, M.beta, MU);
+    const orden = A.map((v, j) => [v, j]).sort((x, y) => y[0] - x[0]);
+    const j = CAT.lista.findIndex(c => c.id === S.perfil.carrera);
+    N.propia = j >= 0 ? { posicion: orden.findIndex(([, k]) => k === j) + 1, afinidad: A[j], nombre: CAT.lista[j].nombre } : null;
+    N.ranking_ids = orden.slice(0, 10).map(([, k]) => CAT.lista[k].id);
+    return N;
+  }
+
+  /* ── Envío ── */
+  function filaPlana(N) {
+    const f = {
+      version: VERSION, codigo, nombre_ficticio: nombre, fecha: new Date().toISOString(),
+      duracion_total_seg: Math.round((Date.now() - S.t0) / 1000),
+      duracion_chaside_seg: S.tChasideFin && S.tChasideIni ? Math.round((S.tChasideFin - S.tChasideIni) / 1000) : '',
+      tipo_colegio: S.perfil.colegio, carrera_id: S.perfil.carrera, carrera_otra: S.perfil.otra || '', semestre: S.perfil.semestre,
+      satisfaccion: S.final.satisfaccion, primera_opcion: S.final.primera, motivo: S.final.motivo, cambiaria: S.final.cambiaria,
+      otra_considerada_1: S.final.otra1 || '', otra_considerada_2: S.final.otra2 || '',
+      atencion_ok: ATENCION.every((a, i) => S.aten[i] === a.esperado) ? 1 : 0
+    };
+    MATERIAS.forEach(([m], i) => {
+      const k = m.replace(' (si la tuviste)', '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]+/g, '_');
+      f['n3_' + k] = S.notas3[i] ?? ''; f['n2_' + k] = S.con2 ? (S.notas2[i] ?? '') : '';
+    });
+    f.materias_quitadas = S.quitadas.map(i => MATERIAS[i][0].replace(' (si la tuviste)', '')).join('|');
+    f.otras_materias = JSON.stringify(S.extra.map(x => ({ materia: x.nombre.trim(), n3: x.n3, n2: S.con2 ? x.n2 : null, areas: pesosExtra(x) })));
+    M.claves.map(([n]) => n).sort((a, b) => a - b).forEach(n => { f['P' + n] = S.resp[n] ?? ''; });
+    f.modelo_top10 = N.ranking_ids.join('|');
+    f.modelo_posicion_carrera = N.propia?.posicion ?? '';
+    f.modelo_afinidad_carrera = N.propia ? Math.round(N.propia.afinidad * 10) / 10 : '';
+    CODIGOS.forEach(a => { const ar = N.areas.find(x => x.codigo === a); f['int_' + a] = ar.interes.percentil; f['ren_' + a] = ar.rendimiento.percentil; f['zona_' + a] = ar.zona.clave; });
+    return f;
+  }
+  async function enviar(fila) {
+    try { localStorage.setItem('encuesta-' + codigo, JSON.stringify(fila)); } catch (_) {}
+    if (!ENDPOINT) return 'vista previa';
+    try {
+      if (/script\.google\.com/.test(ENDPOINT)) {           // Google Apps Script: no devuelve CORS, se envía a ciegas
+        await fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(fila) });
+        return 'enviado';
+      }
+      const r = await fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fila) });
+      const j = await r.json().catch(() => ({}));
+      return r.ok && j.ok ? 'enviado' : 'error';
+    } catch (_) { return 'error'; }
+  }
+
+  function pintarResultado(v) {
+    const N = S.resultado, F = window.FIGURAS;
+    const top = N.carreras.slice(0, 3);
+    const est = S.enviado === 'enviado' ? 'Tus respuestas se guardaron. ¡Gracias por participar!'
+      : S.enviado === 'error' ? 'No pudimos enviar tus respuestas. Revisa tu conexión y vuelve a intentarlo.'
+      : S.enviado === 'vista previa' ? 'Vista previa: esta versión no envía respuestas.' : 'Guardando…';
+    v.innerHTML = `<div class="tarjeta">
+      <div class="aviso">${esc(est)} ${S.enviado === 'error' ? '<button class="boton sec" id="reintentar" style="margin-left:8px">Reintentar</button>' : ''}</div>
+      <div><span class="etiqueta">Tu resultado · ${esc(nombre)} (nombre ficticio)</span><h2>Las 3 profesiones más cercanas a tu perfil</h2></div>
+      <div class="figuras">${top.map(c => { const o = F.outfitFor(c.nombre); return `<div class="figura"><div aria-hidden="true">${F.figureSVG(o, null)}</div><div class="nm">${esc(c.nombre)}</div><div class="pc">${Math.round(c.afinidad)} <span class="sutil">afinidad</span></div><div class="sutil">${esc([c.universidad, c.ciudad].filter(Boolean).join(' · '))}</div></div>`; }).join('')}</div>
+      ${N.propia ? `<div class="propia"><span class="pos">#${N.propia.posicion}</span><div><b>${esc(N.propia.nombre)}</b>, la carrera que estudias, ocupa el puesto ${N.propia.posicion} de ${CAT.lista.length} para tu perfil (afinidad ${Math.round(N.propia.afinidad)}).</div></div>` : ''}
+      <div><h3 style="margin-bottom:10px">Tus 7 áreas</h3>
+        <div class="areas-cab sutil"><span></span><span>Te gusta</span><span>Te va bien</span></div>
+        <div class="areas-r">${N.areas.map(a => `<div class="area-r"><b>${esc(CORTO[a.codigo])}</b>
+          <span class="bar"><span class="bar-t"><i style="width:${a.interes.percentil}%"></i><span class="m"></span></span><span class="mono">${a.interes.percentil}</span></span>
+          <span class="bar"><span class="bar-t"><i style="width:${a.rendimiento.percentil}%"></i><span class="m"></span></span><span class="mono">${a.rendimiento.percentil}</span></span></div>`).join('')}</div>
+        <p class="sutil" style="margin-top:8px">Percentil frente a un grupo de referencia; la línea marca el promedio (50).</p></div>
+      <p class="sutil">Este resultado es una orientación, no un diagnóstico. Tus respuestas nos ayudan a comprobar si el sistema acierta.</p></div>`;
+  }
+
+  /* ── Validación y navegación ── */
+  function enlazar() {
+    const err = t => { const e = $('#err'); if (e) e.textContent = t; return false; };
+    $('#ant')?.addEventListener('click', () => { if (S.paso === 3 && S.pagina > 0) { S.pagina--; pintar(); window.scrollTo({ top: 0 }); } else ir(S.paso - 1); });
+    if (S.paso === 1) {
+      $('#carrera').addEventListener('change', e => { $('#campo-otra').hidden = e.target.value !== 'otra'; });
+    }
+    if (S.paso === 2) {
+      $('#con2').addEventListener('change', e => { S.con2 = e.target.checked; pintar(); });
+      document.querySelectorAll('[data-quitar]').forEach(b => b.addEventListener('click', () => {
+        const i = +b.dataset.quitar; S.quitadas.push(i); delete S.notas3[i]; delete S.notas2[i]; pintar();
+      }));
+      document.querySelectorAll('[data-restaurar]').forEach(b => b.addEventListener('click', () => {
+        S.quitadas = S.quitadas.filter(i => i !== +b.dataset.restaurar); pintar();
+      }));
+      $('#agregar')?.addEventListener('click', () => { S.extra.push({ nombre: '', n3: null, n2: null, area: '' }); pintar(); document.querySelector(`.fila-extra[data-x="${S.extra.length - 1}"] .x-nombre`)?.focus(); });
+      document.querySelectorAll('.fila-extra').forEach(f => {
+        const i = +f.dataset.x, x = S.extra[i];
+        const info = () => {
+          const t = textoClasif(x), div = f.querySelector('.x-info'), sel = div.querySelector('.x-area');
+          if (t.manual && sel) return;                       // ya pide el área: no se redibuja para no perder la selección
+          if (!t.manual) x.area = '';
+          div.innerHTML = t.html + (t.manual ? `<select class="x-area" aria-label="Área relacionada"><option value="">¿Con qué se relaciona?</option>${CODIGOS.map(a => `<option value="${a}">${esc(AREAS[a])}</option>`).join('')}<option value="ninguna">No sé (no se usará)</option></select>` : '');
+          div.querySelector('.x-area')?.addEventListener('change', e => { x.area = e.target.value; });
+        };
+        f.querySelector('.x-nombre').addEventListener('input', e => { x.nombre = e.target.value; info(); });
+        f.querySelector('.x-n3').addEventListener('input', e => { x.n3 = e.target.value === '' ? null : parseFloat(e.target.value); });
+        f.querySelector('.x-n2')?.addEventListener('input', e => { x.n2 = e.target.value === '' ? null : parseFloat(e.target.value); });
+        f.querySelector('.x-area')?.addEventListener('change', e => { x.area = e.target.value; });
+        f.querySelector('.quitar').addEventListener('click', () => { S.extra.splice(i, 1); pintar(); });
+      });
+      document.querySelectorAll('input[data-a]').forEach(i => i.addEventListener('input', () => {
+        const val = i.value === '' ? null : parseFloat(i.value);
+        (i.dataset.a === '3' ? S.notas3 : S.notas2)[i.dataset.i] = (val == null || isNaN(val)) ? null : val;
+      }));
+    }
+    if (S.paso === 3) {
+      const responder = (li, v) => {
+        const k = li.dataset.k;
+        if (k.startsWith('a')) S.aten[+k.slice(1)] = v; else S.resp[+k] = v;
+        li.classList.add('ok'); li.querySelectorAll('[data-v]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.v === v)));
+        li.nextElementSibling?.focus();
+        pintarProgreso();
+      };
+      $('#vista').querySelectorAll('.preguntas li').forEach(li => {
+        li.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) responder(li, +b.dataset.v); });
+        li.addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') responder(li, 1); if (e.key === 'n' || e.key === 'N') responder(li, 0); });
+      });
+    }
+    if (S.paso === 4) {
+      document.querySelectorAll('[data-campo]').forEach(g => g.addEventListener('click', e => {
+        const b = e.target.closest('[data-v]'); if (!b) return;
+        S.final[g.dataset.campo] = b.dataset.v;
+        g.querySelectorAll('[data-v]').forEach(x => x.setAttribute('aria-checked', String(x === b)));
+      }));
+    }
+    $('#reintentar')?.addEventListener('click', async () => { S.enviado = null; pintar(); S.enviado = await enviar(filaPlana(S.resultado)); pintar(); });
+    $('#sig')?.addEventListener('click', async () => {
+      if (S.paso === 0) return ir(1);
+      if (S.paso === 1) {
+        S.perfil = { colegio: $('#colegio').value, carrera: $('#carrera').value, otra: $('#otra')?.value.trim(), semestre: $('#semestre').value };
+        if (!S.perfil.colegio || !S.perfil.carrera || !S.perfil.semestre) return err('Completa las tres preguntas para continuar.');
+        if (S.perfil.carrera === 'otra' && !S.perfil.otra) return err('Escribe el nombre de tu carrera.');
+        return ir(2);
+      }
+      if (S.paso === 2) {
+        const extras = S.extra.filter(x => x.nombre.trim() || x.n3 != null);
+        const vals = [...Object.values(S.notas3), ...(S.con2 ? Object.values(S.notas2) : []), ...extras.flatMap(x => [x.n3, S.con2 ? x.n2 : null])].filter(x => x != null && !isNaN(x));
+        if (vals.some(x => x < 0 || x > 10)) return err('Las notas deben estar entre 0 y 10.');
+        if (extras.some(x => !x.nombre.trim() || x.n3 == null || isNaN(x.n3))) return err('En las materias agregadas, escribe el nombre y la nota de 3.º, o quítalas.');
+        if (extras.some(x => !clasificar(x.nombre) && !x.area)) return err('Indica con qué área se relaciona cada materia agregada (o elige "No sé").');
+        S.extra = extras;
+        if (Object.values(S.notas3).filter(x => x != null).length + extras.length < 5) return err('Escribe al menos 5 notas de 3.º de Bachillerato.');
+        return ir(3);
+      }
+      if (S.paso === 3) {
+        const lote = ITEMS.slice(S.pagina * POR_PAG, (S.pagina + 1) * POR_PAG);
+        const falta = lote.some(it => it.aten != null ? S.aten[it.aten] == null : S.resp[it.n] == null);
+        if (falta) return err('Responde todas las preguntas de esta página.');
+        if (S.pagina < PAGINAS - 1) { S.pagina++; pintar(); window.scrollTo({ top: 0 }); return; }
+        S.tChasideFin = Date.now(); return ir(4);
+      }
+      if (S.paso === 4) {
+        S.final.motivo = $('#motivo').value; S.final.otra1 = $('#otra1').value; S.final.otra2 = $('#otra2').value;
+        if (!S.final.satisfaccion || !S.final.primera || !S.final.motivo || !S.final.cambiaria) return err('Responde las cuatro preguntas principales.');
+        S.resultado = calcular(); S.enviado = null; ir(5);
+        S.enviado = await enviar(filaPlana(S.resultado)); pintar();
+      }
+    });
+  }
+
+  pintarCab(); pintar();
+})();
+
+</script>
+</body></html>

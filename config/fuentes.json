@@ -1,0 +1,52 @@
+{
+  "nucleo": [
+    {
+      "id": "notas",
+      "tipo": "rendimiento",
+      "alfa": 0.85,
+      "familia": "desempeno_academico",
+      "criterios": {
+        "validacion": "publicada",
+        "equivalencia": "debil"
+      },
+      "carpeta": "01_entrada/nucleo/notas"
+    },
+    {
+      "id": "chaside_int",
+      "tipo": "interes",
+      "alfa": 0.8,
+      "familia": "autoinforme_intereses",
+      "criterios": {
+        "validacion": "publicada",
+        "equivalencia": "directa"
+      },
+      "carpeta": "01_entrada/nucleo/chaside"
+    },
+    {
+      "id": "chaside_apt",
+      "tipo": "rendimiento",
+      "alfa": 0.6,
+      "familia": "autoinforme_aptitud",
+      "criterios": {
+        "validacion": "publicada",
+        "equivalencia": "directa"
+      },
+      "carpeta": "01_entrada/nucleo/chaside"
+    }
+  ],
+  "complementarias": [
+    {
+      "id": "ippj",
+      "tipo": "interes",
+      "alfa": 0.85,
+      "familia": "autoinforme_intereses",
+      "criterios": {
+        "validacion": "publicada",
+        "equivalencia": "aproximada"
+      },
+      "carpeta": "01_entrada/complementarias/ippj",
+      "equivalencia": "PENDIENTE: estructura real del IPP-J"
+    }
+  ],
+  "_nota": "Valores de alfa PROVISIONALES. Agregar una prueba = agregar una ficha en complementarias."
+}

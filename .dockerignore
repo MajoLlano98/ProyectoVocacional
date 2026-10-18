@@ -1,0 +1,7 @@
+datos/
+.env
+.git/
+tesis/
+docs/
+**/__pycache__/
+pruebas/datos/demo500_*.csv

@@ -1,0 +1,30 @@
+# Levantar:  docker compose up -d        Ver registros:  docker compose logs -f app
+# Requiere un archivo .env (copiar .env.ejemplo y completarlo).
+services:
+  app:
+    build: .
+    image: vocacional:1.0
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      VOCACIONAL_DATOS: /datos
+    volumes:
+      - ./datos:/datos            # base de datos, configuración editable y respaldos (¡respaldar esta carpeta!)
+    ports:
+      - "127.0.0.1:8000:8000"     # solo accesible desde el propio servidor; el público entra por el túnel
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+
+  # Túnel de Cloudflare: publica la app en tu dominio con HTTPS sin abrir puertos en el servidor.
+  tunel:
+    image: cloudflare/cloudflared:2024.12.2
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      app:
+        condition: service_healthy
+    security_opt: ["no-new-privileges:true"]

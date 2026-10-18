@@ -1,0 +1,31 @@
+VOCACIONAL MIA — Sistema de Recomendación Vocacional (UDLA · AAI)
+==================================================================
+
+SISTEMA/
+  VocacionalBayesiano.ipynb ...... el Colab (módulos 0–9), sin salidas impresas. Versión oficial en Drive:
+                                   https://colab.research.google.com/drive/1lQwEHhXoEtzANzG5_DnbpbVvUUh_jvO-
+  VocacionalBayesiano_DATOS/ ..... estructura de la carpeta de Drive con configuración,
+                                   catálogo de carreras y resultados procesados (seudónimos).
+                                   NO incluye: datos crudos de 01_entrada (notas y CHASIDE con IDs
+                                   reales de menores) ni 04_procesado/privado (llave nombre<->ID).
+                                   Esos solo viven en tu Drive.
+                                   La salida web (05_salidas/web) está en INTERFAZ/datos.
+
+INTERFAZ/  (se publica tal cual en el servidor)
+  index.html, app.js, motor.js, estilo.css, figuras.js
+  datos/ ......................... copia de 05_salidas/web: cohorte.json, carreras.json,
+                                   estudiantes/ (IDs seudónimos, nombres ficticios).
+  Para actualizar: ejecuta el Colab y reemplaza datos/ con el nuevo 05_salidas/web.
+
+TEST PERSONAL/
+  sitio/ ......................... lo publicado en https://mia.jarrindelatorre.com/tu-vocacion/
+                                   index.html, guardar.php, exportar.php, contar.php,
+                                   config.php (clave de exportación), datos/.htaccess
+                                   OJO: al subir sitio/, NO sobrescribas datos/respuestas.jsonl
+                                   del servidor (ahí llegan las respuestas nuevas).
+  respuestas_descargadas/ ........ copia de las respuestas al 2026-10-18 (sin la fila de prueba),
+                                   en JSONL y CSV (abre en Excel). Para el análisis de validación.
+
+Consultas en el servidor (clave en sitio/config.php):
+  contar.php?clave=...    cuántas respuestas hay
+  exportar.php?clave=...  descargar todo en CSV
