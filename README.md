@@ -50,6 +50,11 @@ vocacional/
 
 ## Probar en tu computador (sin Docker)
 
+**Lo más fácil:** doble clic en `probar_en_mi_pc.bat` (Windows) o `bash probar_en_mi_pc.sh` (Mac/Linux). Necesita Python 3.13.
+Abre http://localhost:8000 con `admin@prueba.ec` / `Prueba12345` (datos ficticios).
+
+A mano:
+
 ```bash
 pip install -r requirements-dev.txt
 export VOCACIONAL_DATOS=./datos VOCACIONAL_COOKIE_SEGURA=false

@@ -17,3 +17,4 @@ __pycache__/
 .ipynb_checkpoints/
 .DS_Store
 pruebas/datos/Report_7.csv
+/datos_prueba/
