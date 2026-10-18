@@ -1,2 +1,5 @@
 -r requirements.txt
 requests==2.34.2      # pruebas/prueba_api.py
+scikit-learn
+pandas
+matplotlib
