@@ -9,6 +9,7 @@ Qué se recalibra y con cuántos estudiantes como mínimo (si no se alcanza, se 
   · normas CHASIDE, KR-20 y umbral de consistencia ................... MIN_CHASIDE aplicaciones
   · parámetros latentes α notas, λ, ρ, W_med (partición 70/30) ........ MIN_APRENDER con núcleo completo
   · γ y normas de afinidad de carreras .............................. MIN_APRENDER con núcleo completo
+  · umbral de certeza de zonas (v1.1, sin etiquetas) ................. MIN_APRENDER con núcleo completo
 """
 from __future__ import annotations
 
@@ -94,7 +95,13 @@ def calibrar(cohorte: list[dict], claves, lista_carreras: list[dict], previa: di
         cal["param"] = bayes.aprender(EV, train, cal["chaside"]["alfa_chaside"], alfa_n)
         hecho["aprender"] = {"entrenamiento": len(train), "prueba": len(test)}
         # 4 · carreras
-        MUs = [posterior_matrices(EV[i], CRIT[i], cal, fuentes)[0] for i in EV]
+        post = [posterior_matrices(EV[i], CRIT[i], cal, fuentes) for i in EV]
+        MUs = [m for m, _, _ in post]
+        # 5 · umbral de certeza (v1.1): exactitud esperada ≥ objetivo, calculada por el propio modelo
+        certezas = [bayes.zona(m[k], S[k])["certeza"] for m, S, _ in post for k in range(len(CODIGOS))]
+        eleccion = bayes.elegir_umbral(certezas)
+        cal["umbral_certeza"] = eleccion["umbral"]
+        hecho["umbral"] = eleccion
         perfil = mcar.matriz_perfil(lista_carreras)
         gamma, tabla = mcar.elegir_gamma(MUs, perfil, BETA_INTERES)
         cal["carreras"] = {"gamma": gamma, "tabla_gamma": tabla,
@@ -104,10 +111,11 @@ def calibrar(cohorte: list[dict], claves, lista_carreras: list[dict], previa: di
         hecho["carreras"] = len(MUs)
 
     cal["origen"] = "cohorte" if hecho else previa.get("origen", "referencia")
+    cal["version"] = "1.1"
     cal["fecha"] = datetime.now().isoformat(timespec="seconds")
     cal["detalle"] = {"recalibrado": hecho, "n_cohorte": len(cohorte), "n_con_notas": len(con_notas),
                       "n_con_chaside": len(con_ch), "n_nucleo": len(nucleo), "minimos": mins,
-                      "conservado_de_previa": [k for k in ("notas", "chaside", "aprender", "carreras") if k not in hecho]}
+                      "conservado_de_previa": [k for k in ("notas", "chaside", "aprender", "carreras", "umbral") if k not in hecho]}
     return cal
 
 

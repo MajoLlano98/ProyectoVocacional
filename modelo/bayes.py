@@ -11,8 +11,8 @@ import math
 
 import numpy as np
 
-from .constantes import (CODIGOS, FRACCION_ENTRENAMIENTO, RUBRICA, SEMILLA_PARTICION, TEXTO_AUTO, TEXTO_ZONA,
-                         UMBRAL_CERTEZA)
+from .constantes import (CODIGOS, FRACCION_ENTRENAMIENTO, OBJETIVO_EXACTITUD_ZONA, RUBRICA, SEMILLA_PARTICION, TEXTO_AUTO,
+                         TEXTO_ZONA, UMBRAL_CERTEZA, UMBRALES_CANDIDATOS)
 from .estadistica import bvnu, corr_pareada, media_sd, phi
 
 CRITERIOS_APLICACION = ("antiguedad", "modalidad", "completitud", "consistencia")
@@ -70,6 +70,25 @@ def zona(mu, S, umbral: float = UMBRAL_CERTEZA) -> dict:
     return {"clave": clave, "texto": TEXTO_ZONA[clave], "certeza": probs[mejor], "probabilidades": probs}
 
 
+def elegir_umbral(certezas, objetivo: float = OBJETIVO_EXACTITUD_ZONA, candidatos=UMBRALES_CANDIDATOS) -> dict:
+    """v1.1 · umbral de certeza SIN etiquetas.
+
+    certezas = probabilidad de la zona más probable de cada estudiante×área de la cohorte. Como el posterior es
+    probabilístico, la media de esas probabilidades entre las áreas decididas ES la exactitud que el modelo espera.
+    Se elige el menor umbral cuya exactitud esperada alcanza el objetivo (más bajo = menos «indeterminados»).
+    """
+    p = np.asarray([c for c in certezas if c is not None], float)
+    if p.size == 0:
+        return {"umbral": UMBRAL_CERTEZA, "exactitud_esperada": None, "indeterminados": None, "objetivo": objetivo}
+    for u in candidatos:
+        dec = p >= u
+        if dec.any() and p[dec].mean() >= objetivo:
+            break
+    dec = p >= u
+    return {"umbral": float(u), "exactitud_esperada": float(p[dec].mean()) if dec.any() else None,
+            "indeterminados": float(1 - dec.mean()), "objetivo": objetivo}
+
+
 def autopercepcion(z_apt, z_notas, r_apt_notas):
     if z_apt is None or z_notas is None:
         return None
@@ -114,4 +133,4 @@ def resumen_parametros(P: dict, alfa_chaside: dict) -> dict:
                 "λ² autopercepción": P[a]["lam_apt"] ** 2, "ρ interés–rendimiento": P[a]["rho"]} for a in CODIGOS}
 
 
-__all__ = ["posterior_area", "zona", "autopercepcion", "eje", "particion", "aprender", "media_sd"]
+__all__ = ["posterior_area", "zona", "elegir_umbral", "autopercepcion", "eje", "particion", "aprender", "media_sd"]

@@ -23,7 +23,9 @@ RUBRICA = {
 }
 
 # Módulo 1.8 · zonas del plano
-UMBRAL_CERTEZA = 0.60
+UMBRAL_CERTEZA = 0.60            # valor de la tesis; v1.1 lo recalibra sin etiquetas (bayes.elegir_umbral)
+OBJETIVO_EXACTITUD_ZONA = 0.90   # v1.1: exactitud esperada mínima de una zona asignada
+UMBRALES_CANDIDATOS = tuple(round(0.50 + 0.025 * k, 3) for k in range(15))   # 0,500 … 0,850
 ZONAS = ("vocacion_consolidada", "interes_a_fortalecer", "talento_no_explorado", "no_prioritaria")
 TEXTO_ZONA = {
     "vocacion_consolidada": "Vocación consolidada", "interes_a_fortalecer": "Interés a fortalecer",
