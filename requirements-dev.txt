@@ -1,5 +1,6 @@
 -r requirements.txt
 requests==2.34.2      # pruebas/prueba_api.py
-scikit-learn
-pandas
-matplotlib
+# Evaluación (alternativa/ y evaluacion/)
+scikit-learn==1.9.1
+pandas==3.0.5
+matplotlib==3.11.2
