@@ -1,5 +1,7 @@
 # Sistema de Recomendación Vocacional Bayesiano
 
+**Versión 1.1.0** · cambios en [`CHANGELOG.md`](CHANGELOG.md)
+
 Plataforma de orientación vocacional para el DECE: combina las **notas del colegio** y el **test CHASIDE** con un
 modelo bayesiano para estimar, en cada una de las 7 áreas vocacionales, cuánto le **interesa** al estudiante y qué
 tan bien **rinde**, con su incertidumbre, y propone **carreras afines** del Ecuador.
@@ -42,6 +44,8 @@ vocacional/
 ├── despliegue/       guía de instalación, actualización y respaldo externo
 ├── docs/             manual del DECE, manual técnico y privacidad
 ├── pruebas/          prueba de punta a punta de la API y datos de ejemplo ficticios
+├── alternativa/      alternativa evaluada (Random Forest) y Colab de comparación
+├── evaluacion/       validación cruzada repetida, IC 95 %, ablaciones y figuras (v1.0 → v1.1)
 ├── scripts/          construcción y validación de la calibración de referencia
 ├── tesis/            notebook de la tesis (sin modificar) y encuesta de validación con universitarios
 ├── Dockerfile, docker-compose.yml, .env.ejemplo
@@ -71,6 +75,27 @@ docker compose up -d --build
 docker compose exec app python -m servidor.admin crear-usuario --usuario dece@colegio.edu.ec --nombre "…" --rol admin
 ```
 Detalle paso a paso: [`despliegue/GUIA_INSTALACION.md`](despliegue/GUIA_INSTALACION.md).
+
+## Dependencias y versiones
+
+Probado con **Python 3.13** (Windows 11 y Linux). Versiones exactas en `requirements.txt` y `requirements-dev.txt`.
+
+| Uso | Paquetes |
+|---|---|
+| Servidor y modelo | starlette 1.6.0 · uvicorn 0.53.0 · itsdangerous 2.2.0 · python-multipart 0.0.32 · numpy 2.5.3 · scipy 1.18.1 · openpyxl 3.1.5 |
+| Pruebas y evaluación | requests 2.34.2 · scikit-learn 1.9.1 · pandas 3.0.5 · matplotlib 3.11.2 |
+| Producción | Docker + `cloudflare/cloudflared` 2024.12.2 (`docker-compose.yml`) |
+
+## Evaluación del modelo
+
+```bash
+pip install -r requirements-dev.txt
+python evaluacion/validacion_cruzada.py   # 3 simulaciones × 5 folds, IC 95 %, pruebas pareadas (~4 min)
+python evaluacion/sensibilidad.py         # robustez y objetivo del umbral (~1 min)
+python evaluacion/graficos.py             # figuras
+```
+Detalle en [`evaluacion/LEEME.md`](evaluacion/LEEME.md). La v1.1 calibra el umbral de certeza de las zonas sin
+etiquetas (exactitud esperada ≥ 90 %): zonas asignadas correctas 86,0 % → 88,9 % en validación cruzada.
 
 ## Fidelidad con la tesis
 
